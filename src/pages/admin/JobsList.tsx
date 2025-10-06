@@ -123,7 +123,10 @@ export default function JobsList() {
         page++;
       }
 
-      setJobs(allJobs);
+      // Remove duplicate jobs by id to avoid React duplicate key issues
+      const uniqueJobs = [...new Map(allJobs.map((j) => [j.id, j])).values()]
+        .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime());
+      setJobs(uniqueJobs);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
