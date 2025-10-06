@@ -1,0 +1,24 @@
+name: Delete Old Jobs
+
+on:
+  schedule:
+    # Run at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  delete-old-jobs:
+    runs-on: ubuntu-latest
+    
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    
+    steps:
+      - name: Delete old jobs
+        run: |
+          curl -X POST "${{ env.SUPABASE_URL }}/rest/v1/rpc/delete_old_jobs" \
+          -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
+          -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}"
