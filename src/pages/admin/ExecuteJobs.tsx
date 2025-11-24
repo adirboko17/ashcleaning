@@ -9,17 +9,17 @@ interface Job {
   id: string;
   branch: {
     id: string;
-    name: string;
-    address: string;
+    name: string | null;
+    address: string | null;
     client: {
       id: string;
-      full_name: string;
-    };
-  };
+      full_name: string | null;
+    } | null;
+  } | null;
   employee: {
     id: string;
-    full_name: string;
-  };
+    full_name: string | null;
+  } | null;
   scheduled_date: string;
   status: 'pending' | 'completed';
 }
@@ -147,17 +147,22 @@ export default function ExecuteJobs() {
 
   // Filter jobs by search term and date
   const filteredJobs = jobs.filter(job => {
-    const searchMatch = 
-      job.branch.client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.branch.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.employee.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const clientName = job.branch?.client?.full_name ?? '';
+    const branchName = job.branch?.name ?? '';
+    const branchAddress = job.branch?.address ?? '';
+    const employeeName = job.employee?.full_name ?? '';
+
+    const searchMatch =
+      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      branchAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employeeName.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (!selectedDate) return searchMatch;
-    
+
     const jobDate = parseISO(job.scheduled_date);
     const searchDate = parseISO(selectedDate);
-    
+
     return searchMatch && isWithinInterval(jobDate, {
       start: startOfDay(searchDate),
       end: endOfDay(searchDate)
@@ -246,19 +251,19 @@ export default function ExecuteJobs() {
                           <div className="flex items-center mb-2">
                             <Building2 className="h-5 w-5 text-blue-600 ml-2" />
                             <h3 className="font-medium text-gray-900">
-                              {job.branch.client.full_name}
+                              {job.branch?.client?.full_name ?? 'לקוח לא ידוע'}
                             </h3>
                           </div>
                           <div className="flex items-start text-gray-600">
                             <MapPin className="h-4 w-4 ml-2 mt-1 shrink-0" />
                             <div>
-                              <p className="text-sm font-medium">{job.branch.name}</p>
-                              <p className="text-sm">{job.branch.address}</p>
+                              <p className="text-sm font-medium">{job.branch?.name ?? 'סניף ללא שם'}</p>
+                              <p className="text-sm">{job.branch?.address ?? ''}</p>
                             </div>
                           </div>
                           <div className="flex items-center mt-2 text-gray-600">
                             <User className="h-4 w-4 ml-2" />
-                            <p className="text-sm">{job.employee.full_name}</p>
+                            <p className="text-sm">{job.employee?.full_name ?? 'ללא עובד'}</p>
                           </div>
                         </div>
                         <p className="text-lg font-medium text-gray-900">
@@ -310,9 +315,9 @@ export default function ExecuteJobs() {
 
             <div className="space-y-4">
               <div>
-                <p className="font-medium text-gray-900">{selectedJob.branch.client.full_name}</p>
-                <p className="text-sm text-gray-600">{selectedJob.branch.name}</p>
-                <p className="text-sm text-gray-500">{selectedJob.branch.address}</p>
+                <p className="font-medium text-gray-900">{selectedJob.branch?.client?.full_name ?? 'לקוח לא ידוע'}</p>
+                <p className="text-sm text-gray-600">{selectedJob.branch?.name ?? 'סניף ללא שם'}</p>
+                <p className="text-sm text-gray-500">{selectedJob.branch?.address ?? ''}</p>
               </div>
 
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
