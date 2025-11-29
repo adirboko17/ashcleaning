@@ -147,7 +147,8 @@ export default function Reports() {
         headStyles: {
           fillColor: [59, 130, 246],
           textColor: 255,
-          fontStyle: 'bold',
+          font: 'Arial',
+          fontStyle: 'normal',
           halign: 'right'
         },
         columnStyles: {
