@@ -7,7 +7,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, isBefore, end
 import { he } from 'date-fns/locale';
 import MobileNav from '../../components/MobileNav';
 import Logo from '../../components/Logo';
-import imageCompression from 'browser-image-compression';
+import { compressReceiptImage } from '../../utils/receiptImage';
 
 interface Job {
   id: string;
@@ -143,21 +143,6 @@ function UpcomingJobs() {
     fetchUpcomingJobs();
   }, [user?.id]);
 
-  async function compressImage(file: File): Promise<File> {
-    const options = {
-      maxSizeMB: 0.03, // 30KB = 0.03MB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
-
-    try {
-      return await imageCompression(file, options);
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      throw error;
-    }
-  }
-
   async function completeJob() {
     if (!selectedJob || !receiptFile) return;
 
@@ -165,8 +150,8 @@ function UpcomingJobs() {
       setIsSubmitting(true);
       setError(null);
 
-      // Compress the image before uploading
-      const compressedFile = await compressImage(receiptFile);
+      // Compress the image before uploading (never throws; falls back to original)
+      const compressedFile = await compressReceiptImage(receiptFile);
 
       // Update job status first
       const { error: updateError } = await supabase
