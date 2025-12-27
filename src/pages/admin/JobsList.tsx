@@ -95,6 +95,30 @@ export default function JobsList() {
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [isReceiptSubmitting, setIsReceiptSubmitting] = useState(false);
+  const [isReceiptModalDragging, setIsReceiptModalDragging] = useState(false);
+  const receiptModalCardRef = React.useRef<HTMLDivElement | null>(null);
+  const receiptModalPositionRef = React.useRef({ x: 0, y: 0 });
+  const receiptModalRafRef = React.useRef<number | null>(null);
+  const receiptModalDragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
+  const [isEditModalDragging, setIsEditModalDragging] = useState(false);
+  const editModalCardRef = React.useRef<HTMLDivElement | null>(null);
+  const editModalPositionRef = React.useRef({ x: 0, y: 0 });
+  const editModalRafRef = React.useRef<number | null>(null);
+  const editModalDragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
   const [isAddModalDragging, setIsAddModalDragging] = useState(false);
   const addModalCardRef = React.useRef<HTMLDivElement | null>(null);
   const addModalPositionRef = React.useRef({ x: 0, y: 0 });
@@ -211,6 +235,42 @@ export default function JobsList() {
       });
     }
   }, [showBulkEditModal]);
+
+  useEffect(() => {
+    // Reset the receipt modal position each time it opens
+    if (showReceiptModal) {
+      setIsReceiptModalDragging(false);
+      receiptModalDragRef.current = null;
+      receiptModalPositionRef.current = { x: 0, y: 0 };
+      if (receiptModalRafRef.current) {
+        cancelAnimationFrame(receiptModalRafRef.current);
+        receiptModalRafRef.current = null;
+      }
+      requestAnimationFrame(() => {
+        if (receiptModalCardRef.current) {
+          receiptModalCardRef.current.style.transform = 'translate3d(0px, 0px, 0)';
+        }
+      });
+    }
+  }, [showReceiptModal]);
+
+  useEffect(() => {
+    // Reset the edit modal position each time it opens
+    if (showEditModal) {
+      setIsEditModalDragging(false);
+      editModalDragRef.current = null;
+      editModalPositionRef.current = { x: 0, y: 0 };
+      if (editModalRafRef.current) {
+        cancelAnimationFrame(editModalRafRef.current);
+        editModalRafRef.current = null;
+      }
+      requestAnimationFrame(() => {
+        if (editModalCardRef.current) {
+          editModalCardRef.current.style.transform = 'translate3d(0px, 0px, 0)';
+        }
+      });
+    }
+  }, [showEditModal]);
 
   useEffect(() => {
     if (!receiptFile) {
@@ -332,6 +392,112 @@ export default function JobsList() {
     }
     bulkEditModalDragRef.current = null;
     setIsBulkEditModalDragging(false);
+  };
+
+  const applyReceiptModalTransform = () => {
+    if (!receiptModalCardRef.current) return;
+    const { x, y } = receiptModalPositionRef.current;
+    receiptModalCardRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+
+  const onReceiptModalHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('[data-no-drag="true"]')) return;
+    if (e.button !== 0) return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+    receiptModalDragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: receiptModalPositionRef.current.x,
+      originY: receiptModalPositionRef.current.y,
+    };
+    setIsReceiptModalDragging(true);
+  };
+
+  const onReceiptModalHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = receiptModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    receiptModalPositionRef.current = { x: drag.originX + dx, y: drag.originY + dy };
+
+    if (receiptModalRafRef.current == null) {
+      receiptModalRafRef.current = requestAnimationFrame(() => {
+        receiptModalRafRef.current = null;
+        applyReceiptModalTransform();
+      });
+    }
+  };
+
+  const onReceiptModalHeaderPointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = receiptModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    receiptModalDragRef.current = null;
+    setIsReceiptModalDragging(false);
+  };
+
+  const applyEditModalTransform = () => {
+    if (!editModalCardRef.current) return;
+    const { x, y } = editModalPositionRef.current;
+    editModalCardRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+
+  const onEditModalHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('[data-no-drag="true"]')) return;
+    if (e.button !== 0) return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+    editModalDragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: editModalPositionRef.current.x,
+      originY: editModalPositionRef.current.y,
+    };
+    setIsEditModalDragging(true);
+  };
+
+  const onEditModalHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = editModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    editModalPositionRef.current = { x: drag.originX + dx, y: drag.originY + dy };
+
+    if (editModalRafRef.current == null) {
+      editModalRafRef.current = requestAnimationFrame(() => {
+        editModalRafRef.current = null;
+        applyEditModalTransform();
+      });
+    }
+  };
+
+  const onEditModalHeaderPointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = editModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    editModalDragRef.current = null;
+    setIsEditModalDragging(false);
   };
 
   useEffect(() => {
@@ -1166,7 +1332,7 @@ export default function JobsList() {
               </button>
             </div>
 
-            <form onSubmit={handleAddJob} className="space-y-6">
+            <form onSubmit={handleAddJob} className="space-y-6 max-h-[calc(100vh-12rem)] overflow-y-auto pr-1">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Business Selection */}
                 <div>
@@ -1342,10 +1508,24 @@ export default function JobsList() {
       {/* Edit Job Modal */}
       {showEditModal && selectedJob && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl"
+            ref={editModalCardRef}
+            style={{ willChange: 'transform' }}
+          >
+            <div 
+              className={`flex justify-between items-center mb-4 select-none ${isEditModalDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onPointerDown={onEditModalHeaderPointerDown}
+              onPointerMove={onEditModalHeaderPointerMove}
+              onPointerUp={onEditModalHeaderPointerUpOrCancel}
+              onPointerCancel={onEditModalHeaderPointerUpOrCancel}
+              style={{ touchAction: 'none' }}
+              title="גרור כדי להזיז את החלון"
+            >
               <h2 className="text-xl font-bold">עריכת עבודה</h2>
               <button
+                data-no-drag="true"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   setShowEditModal(false);
                   setSelectedJob(null);
@@ -1362,7 +1542,7 @@ export default function JobsList() {
               </button>
             </div>
 
-            <form onSubmit={handleEditJob} className="space-y-4">
+            <form onSubmit={handleEditJob} className="space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto pr-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   עובד
@@ -1481,7 +1661,7 @@ export default function JobsList() {
               נבחרו <span className="font-semibold">{selectedJobIds.length}</span> עבודות (ממתינות בלבד).
             </p>
 
-            <form onSubmit={handleBulkEditJobs} className="space-y-4">
+            <form onSubmit={handleBulkEditJobs} className="space-y-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   עובד
@@ -1615,12 +1795,26 @@ export default function JobsList() {
       {/* Edit Receipt Modal */}
       {showReceiptModal && receiptJob && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative">
-            <div className="flex justify-between items-center mb-4">
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative"
+            ref={receiptModalCardRef}
+            style={{ willChange: 'transform' }}
+          >
+            <div 
+              className={`flex justify-between items-center mb-4 select-none ${isReceiptModalDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onPointerDown={onReceiptModalHeaderPointerDown}
+              onPointerMove={onReceiptModalHeaderPointerMove}
+              onPointerUp={onReceiptModalHeaderPointerUpOrCancel}
+              onPointerCancel={onReceiptModalHeaderPointerUpOrCancel}
+              style={{ touchAction: 'none' }}
+              title="גרור כדי להזיז את החלון"
+            >
               <h2 className="text-xl font-bold">
                 {receiptJob.receipt_url ? 'עריכת תמונת עבודה' : 'העלאת תמונת עבודה'}
               </h2>
               <button
+                data-no-drag="true"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   setShowReceiptModal(false);
                   setReceiptJob(null);
@@ -1633,7 +1827,7 @@ export default function JobsList() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
               <div className="text-sm text-gray-700">
                 <div className="font-medium">{receiptJob.branch.client.full_name}</div>
                 <div className="text-gray-600">{receiptJob.branch.name} - {receiptJob.branch.address}</div>
