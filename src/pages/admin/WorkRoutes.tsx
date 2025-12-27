@@ -249,105 +249,109 @@ export default function WorkRoutes() {
         </div>
 
         <div className="p-4 sm:p-6">
-          {/* Calendar Header */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-4">
-            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => (
-              <div 
-                key={day} 
-                className={`text-center py-2 rounded-lg ${
-                  index === 5 ? 'bg-blue-50' : index === 6 ? 'bg-indigo-50' : 'bg-gray-50'
-                }`}
-              >
-                <span className="hidden sm:inline font-semibold text-gray-700 text-sm">{day}</span>
-                <span className="sm:hidden font-semibold text-gray-700">{day.slice(0, 1)}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-3">
-            {getDaysInMonth().map((date, index) => {
-              if (!date) {
-                return <div key={`empty-${index}`} className="p-2 sm:p-4" />;
-              }
-
-              const dateStr = format(date, 'yyyy-MM-dd');
-              const assignedTemplateIndex = assignments[dateStr];
-              const assignedTemplate = assignedTemplateIndex !== undefined ? templates[assignedTemplateIndex] : null;
-              const dayOfWeek = getDay(date);
-              const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
-              const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
-              
-              return (
-                <div
-                  key={dateStr}
-                  className={`min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 border-2 rounded-xl transition-all ${
-                    isToday 
-                      ? 'border-indigo-500 ring-2 ring-indigo-200' 
-                      : assignedTemplate
-                      ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
-                      : isWeekend
-                      ? 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                      : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-md'
-                  }`}
-                >
-                  <div className="h-full flex flex-col">
-                    <div className={`text-center font-bold text-lg mb-2 ${
-                      isToday 
-                        ? 'text-indigo-600' 
-                        : assignedTemplate 
-                        ? 'text-blue-700' 
-                        : 'text-gray-700'
-                    }`}>
-                      {format(date, 'd')}
-                    </div>
-                    {assignedTemplate ? (
-                      <div className="mt-auto space-y-2">
-                        <div className="bg-white rounded-lg p-2 shadow-sm border border-blue-200">
-                          <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
-                            {assignedTemplate.name}
-                          </div>
-                          {assignedTemplate.stops && assignedTemplate.stops.length > 0 && (
-                            <div className="text-xs text-gray-600 mt-1">
-                              {assignedTemplate.stops.length} תחנות
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeTemplateFromDate(date)}
-                          disabled={isSubmitting}
-                          className="w-full text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 py-1.5 rounded-md transition-colors border border-red-300 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          הסר שיבוץ
-                        </button>
-                      </div>
-                    ) : (
-                      <select
-                        className="mt-auto w-full text-xs sm:text-sm border-2 border-gray-300 rounded-lg py-2 px-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        value=""
-                        onChange={(e) => {
-                          const templateIndex = parseInt(e.target.value);
-                          if (!isNaN(templateIndex)) {
-                            assignTemplateToDate(date, templateIndex);
-                          }
-                        }}
-                        disabled={isSubmitting}
-                      >
-                        <option value="">בחר תבנית...</option>
-                        {templates.map((template, index) => (
-                          <option key={template.id} value={index}>
-                            {template.name}
-                            {template.stops && template.stops.length > 0 ? 
-                              ` (${template.stops.length})` : 
-                              ' (ריקה)'}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <div className="min-w-[800px] lg:min-w-0">
+              {/* Calendar Header */}
+              <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-4">
+                {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => (
+                  <div 
+                    key={day} 
+                    className={`text-center py-2 rounded-lg ${
+                      index === 5 ? 'bg-blue-50' : index === 6 ? 'bg-indigo-50' : 'bg-gray-50'
+                    }`}
+                  >
+                    <span className="hidden sm:inline font-semibold text-gray-700 text-sm">{day}</span>
+                    <span className="sm:hidden font-semibold text-gray-700">{day.slice(0, 1)}</span>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2 sm:gap-3">
+                {getDaysInMonth().map((date, index) => {
+                  if (!date) {
+                    return <div key={`empty-${index}`} className="p-2 sm:p-4" />;
+                  }
+
+                  const dateStr = format(date, 'yyyy-MM-dd');
+                  const assignedTemplateIndex = assignments[dateStr];
+                  const assignedTemplate = assignedTemplateIndex !== undefined ? templates[assignedTemplateIndex] : null;
+                  const dayOfWeek = getDay(date);
+                  const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+                  const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+                  
+                  return (
+                    <div
+                      key={dateStr}
+                      className={`min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 border-2 rounded-xl transition-all ${
+                        isToday 
+                          ? 'border-indigo-500 ring-2 ring-indigo-200' 
+                          : assignedTemplate
+                          ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
+                          : isWeekend
+                          ? 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                          : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="h-full flex flex-col">
+                        <div className={`text-center font-bold text-lg mb-2 ${
+                          isToday 
+                            ? 'text-indigo-600' 
+                            : assignedTemplate 
+                            ? 'text-blue-700' 
+                            : 'text-gray-700'
+                        }`}>
+                          {format(date, 'd')}
+                        </div>
+                        {assignedTemplate ? (
+                          <div className="mt-auto space-y-2">
+                            <div className="bg-white rounded-lg p-2 shadow-sm border border-blue-200">
+                              <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
+                                {assignedTemplate.name}
+                              </div>
+                              {assignedTemplate.stops && assignedTemplate.stops.length > 0 && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {assignedTemplate.stops.length} תחנות
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeTemplateFromDate(date)}
+                              disabled={isSubmitting}
+                              className="w-full text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 py-1.5 rounded-md transition-colors border border-red-300 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              הסר שיבוץ
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            className="mt-auto w-full text-xs sm:text-sm border-2 border-gray-300 rounded-lg py-2 px-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            value=""
+                            onChange={(e) => {
+                              const templateIndex = parseInt(e.target.value);
+                              if (!isNaN(templateIndex)) {
+                                assignTemplateToDate(date, templateIndex);
+                              }
+                            }}
+                            disabled={isSubmitting}
+                          >
+                            <option value="">בחר תבנית...</option>
+                            {templates.map((template, index) => (
+                              <option key={template.id} value={index}>
+                                {template.name}
+                                {template.stops && template.stops.length > 0 ? 
+                                  ` (${template.stops.length})` : 
+                                  ' (ריקה)'}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
