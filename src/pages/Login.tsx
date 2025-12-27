@@ -24,7 +24,7 @@ function Login() {
       // Get user from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, phone_number, full_name, role')
+        .select('id, phone_number, full_name, role, is_active')
         .eq('phone_number', data.phone)
         .eq('password', data.password)
         .maybeSingle();
@@ -36,6 +36,11 @@ function Login() {
 
       if (!userData) {
         throw new Error('שם משתמש או סיסמה שגויים');
+      }
+
+      // Block inactive employees (default is active if column not yet exists on DB)
+      if (userData.role === 'employee' && (userData.is_active ?? true) === false) {
+        throw new Error('המשתמש לא פעיל. פנה למנהל המערכת');
       }
 
       setUser(userData);

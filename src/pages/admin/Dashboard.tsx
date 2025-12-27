@@ -34,86 +34,88 @@ function AdminDashboard() {
   };
 
   const Navigation = () => (
-    <nav>
+    <nav className="px-3 py-4 space-y-1">
       <Link
         to="/admin"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <LayoutDashboard className="h-5 w-5 ml-3" />
+        <LayoutDashboard className="h-5 w-5 ml-3 text-gray-500" />
         דאשבורד ראשי
       </Link>
       
       <Link
         to="/admin/clients"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <Building2 className="h-5 w-5 ml-3" />
+        <Building2 className="h-5 w-5 ml-3 text-gray-500" />
         לקוחות וסניפים
       </Link>
       
       <Link
         to="/admin/employees"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <Users className="h-5 w-5 ml-3" />
+        <Users className="h-5 w-5 ml-3 text-gray-500" />
         עובדים
       </Link>
       
       <Link
         to="/admin/jobs"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <Calendar className="h-5 w-5 ml-3" />
+        <Calendar className="h-5 w-5 ml-3 text-gray-500" />
         עבודות
       </Link>
 
       <Link
         to="/admin/templates"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <FileSpreadsheet className="h-5 w-5 ml-3" />
+        <FileSpreadsheet className="h-5 w-5 ml-3 text-gray-500" />
         תבניות
       </Link>
 
       <Link
         to="/admin/routes"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <RouteIcon className="h-5 w-5 ml-3" />
+        <RouteIcon className="h-5 w-5 ml-3 text-gray-500" />
         קווי עבודה
       </Link>
 
       <Link
         to="/admin/execute"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <ClipboardCheck className="h-5 w-5 ml-3" />
+        <ClipboardCheck className="h-5 w-5 ml-3 text-gray-500" />
         ביצוע עבודות
       </Link>
 
       <Link
         to="/admin/reports"
-        className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all duration-200 font-medium"
       >
-        <FileText className="h-5 w-5 ml-3" />
+        <FileText className="h-5 w-5 ml-3 text-gray-500" />
         דוחות
       </Link>
       
-      <button
-        onClick={logout}
-        className="w-full flex items-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-      >
-        <LogOut className="h-5 w-5 ml-3" />
-        התנתק
-      </button>
+      <div className="pt-4 mt-4 border-t border-gray-200">
+        <button
+          onClick={logout}
+          className="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all duration-200 font-medium"
+        >
+          <LogOut className="h-5 w-5 ml-3 text-gray-500" />
+          התנתק
+        </button>
+      </div>
     </nav>
   );
 
   return (
     <div className="min-h-screen flex">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block w-64 bg-white shadow-lg">
-        <div className="p-4">
+      <div className="hidden lg:block w-64 bg-white shadow-lg border-l border-gray-200">
+        <div className="p-6 border-b border-gray-200 bg-gray-50">
           <Logo className="h-12 w-auto" />
         </div>
         <Navigation />
@@ -175,7 +177,8 @@ function AdminOverview() {
           supabase
             .from('users')
             .select('id', { count: 'exact' })
-            .eq('role', 'employee'),
+            .eq('role', 'employee')
+            .eq('is_active', true),
           
           // Get total branches
           supabase

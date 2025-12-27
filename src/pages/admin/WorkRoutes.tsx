@@ -85,33 +85,34 @@ export default function WorkRoutes() {
 
       if (deleteError) throw deleteError;
 
-      // Validate branch IDs before creating jobs
-      const validJobsToCreate = [];
-      for (const stop of template.stops) {
-        // Check if branch exists
-        const { data: branchData, error: branchError } = await supabase
-          .from('branches')
-          .select('id')
-          .eq('id', stop.branch_id)
-          .maybeSingle();
+      // Validate branch IDs before creating jobs - optimized with single query
+      const uniqueBranchIds = [...new Set(template.stops.map(stop => stop.branch_id))];
+      
+      const { data: existingBranches, error: branchError } = await supabase
+        .from('branches')
+        .select('id')
+        .in('id', uniqueBranchIds);
 
-        if (branchError) {
-          console.error(`Error checking branch ${stop.branch_id}:`, branchError);
-          continue;
-        }
+      if (branchError) {
+        throw new Error('שגיאה בבדיקת סניפים: ' + branchError.message);
+      }
 
-        if (!branchData) {
-          console.error(`Branch not found: ${stop.branch_id}`);
-          continue;
-        }
-
-        validJobsToCreate.push({
+      const existingBranchIds = new Set(existingBranches?.map(b => b.id) || []);
+      
+      const validJobsToCreate = template.stops
+        .filter(stop => {
+          if (!existingBranchIds.has(stop.branch_id)) {
+            console.warn(`Branch not found: ${stop.branch_id}`);
+            return false;
+          }
+          return true;
+        })
+        .map(stop => ({
           branch_id: stop.branch_id,
           employee_id: stop.employee_id,
           scheduled_date: `${dateStr}T${stop.time}:00`,
           status: 'pending'
-        });
-      }
+        }));
 
       if (validJobsToCreate.length === 0) {
         throw new Error('לא נמצאו סניפים תקינים בתבנית');
@@ -208,50 +209,63 @@ export default function WorkRoutes() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">שיבוץ קווי עבודה</h1>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">שיבוץ קווי עבודה</h1>
+        <p className="text-gray-600">שבץ תבניות עבודה לימים שונים בחודש</p>
+      </div>
 
       {/* Calendar View */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+        <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">שיבוץ תבניות</h2>
-            <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-6 w-6 text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">שיבוץ תבניות</h2>
+            </div>
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentMonth(prev => addMonths(prev, -1))}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm border border-gray-200"
+                title="חודש קודם"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-5 w-5 text-gray-700" />
               </button>
-              <span className="font-medium hidden sm:inline">
+              <span className="font-semibold text-lg hidden sm:inline min-w-[150px] text-center">
                 {format(currentMonth, 'MMMM yyyy', { locale: he })}
               </span>
-              <span className="font-medium sm:hidden">
+              <span className="font-semibold sm:hidden min-w-[80px] text-center">
                 {format(currentMonth, 'MM/yyyy')}
               </span>
               <button
                 onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm border border-gray-200"
+                title="חודש הבא"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5 text-gray-700" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="p-2 sm:p-4">
+        <div className="p-4 sm:p-6">
           {/* Calendar Header */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-4 mb-2 sm:mb-4">
-            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day) => (
-              <div key={day} className="text-center">
-                <span className="hidden sm:inline font-medium text-gray-500">{day}</span>
-                <span className="sm:hidden font-medium text-gray-500">{day.slice(0, 1)}</span>
+          <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-4">
+            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => (
+              <div 
+                key={day} 
+                className={`text-center py-2 rounded-lg ${
+                  index === 5 ? 'bg-blue-50' : index === 6 ? 'bg-indigo-50' : 'bg-gray-50'
+                }`}
+              >
+                <span className="hidden sm:inline font-semibold text-gray-700 text-sm">{day}</span>
+                <span className="sm:hidden font-semibold text-gray-700">{day.slice(0, 1)}</span>
               </div>
             ))}
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-4">
+          <div className="grid grid-cols-7 gap-2 sm:gap-3">
             {getDaysInMonth().map((date, index) => {
               if (!date) {
                 return <div key={`empty-${index}`} className="p-2 sm:p-4" />;
@@ -260,36 +274,56 @@ export default function WorkRoutes() {
               const dateStr = format(date, 'yyyy-MM-dd');
               const assignedTemplateIndex = assignments[dateStr];
               const assignedTemplate = assignedTemplateIndex !== undefined ? templates[assignedTemplateIndex] : null;
+              const dayOfWeek = getDay(date);
+              const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+              const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
               
               return (
                 <div
                   key={dateStr}
-                  className={`p-2 sm:p-4 border rounded-lg ${
-                    assignedTemplate
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'hover:bg-gray-50'
+                  className={`min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 border-2 rounded-xl transition-all ${
+                    isToday 
+                      ? 'border-indigo-500 ring-2 ring-indigo-200' 
+                      : assignedTemplate
+                      ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
+                      : isWeekend
+                      ? 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                      : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-md'
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="font-medium">
+                  <div className="h-full flex flex-col">
+                    <div className={`text-center font-bold text-lg mb-2 ${
+                      isToday 
+                        ? 'text-indigo-600' 
+                        : assignedTemplate 
+                        ? 'text-blue-700' 
+                        : 'text-gray-700'
+                    }`}>
                       {format(date, 'd')}
                     </div>
                     {assignedTemplate ? (
-                      <div className="mt-2 space-y-2">
-                        <div className="text-xs sm:text-sm text-blue-600">
-                          {assignedTemplate.name}
+                      <div className="mt-auto space-y-2">
+                        <div className="bg-white rounded-lg p-2 shadow-sm border border-blue-200">
+                          <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
+                            {assignedTemplate.name}
+                          </div>
+                          {assignedTemplate.stops && assignedTemplate.stops.length > 0 && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {assignedTemplate.stops.length} תחנות
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={() => removeTemplateFromDate(date)}
                           disabled={isSubmitting}
-                          className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                          className="w-full text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 py-1.5 rounded-md transition-colors border border-red-300 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          הסר
+                          הסר שיבוץ
                         </button>
                       </div>
                     ) : (
                       <select
-                        className="mt-2 w-full text-xs sm:text-sm border-gray-300 rounded-md"
+                        className="mt-auto w-full text-xs sm:text-sm border-2 border-gray-300 rounded-lg py-2 px-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         value=""
                         onChange={(e) => {
                           const templateIndex = parseInt(e.target.value);
@@ -299,7 +333,7 @@ export default function WorkRoutes() {
                         }}
                         disabled={isSubmitting}
                       >
-                        <option value="">שבץ</option>
+                        <option value="">בחר תבנית...</option>
                         {templates.map((template, index) => (
                           <option key={template.id} value={index}>
                             {template.name}
@@ -318,8 +352,19 @@ export default function WorkRoutes() {
         </div>
 
         {error && (
-          <div className="m-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-            {error}
+          <div className="mx-4 mb-4 sm:mx-6 sm:mb-6 bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-xl shadow-sm flex items-start gap-3">
+            <span className="text-red-500 text-xl">⚠️</span>
+            <div className="flex-1">
+              <p className="font-semibold">שגיאה</p>
+              <p className="text-sm mt-1">{error}</p>
+            </div>
+          </div>
+        )}
+        
+        {isSubmitting && (
+          <div className="mx-4 mb-4 sm:mx-6 sm:mb-6 bg-blue-50 border-2 border-blue-300 text-blue-700 px-4 py-3 rounded-xl shadow-sm flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <span className="font-medium">מבצע שיבוץ...</span>
           </div>
         )}
       </div>

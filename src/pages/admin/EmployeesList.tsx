@@ -6,6 +6,7 @@ interface Employee {
   id: string;
   full_name: string;
   phone_number: string;
+  is_active?: boolean;
 }
 
 interface EditEmployeeForm {
@@ -31,6 +32,7 @@ export default function EmployeesList() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updatingActiveEmployeeId, setUpdatingActiveEmployeeId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditEmployeeForm>({
     full_name: '',
     phone_number: '',
@@ -71,7 +73,7 @@ export default function EmployeesList() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, phone_number')
+        .select('id, full_name, phone_number, is_active')
         .eq('role', 'employee')
         .order('full_name');
 
@@ -83,6 +85,35 @@ export default function EmployeesList() {
       setIsLoading(false);
     }
   }
+
+  const toggleEmployeeActive = async (employee: Employee) => {
+    const nextActive = !((employee.is_active ?? true) === true);
+
+    if (!nextActive) {
+      const ok = window.confirm(`האם להפוך את ${employee.full_name} ל"לא פעיל"?`);
+      if (!ok) return;
+    }
+
+    setUpdatingActiveEmployeeId(employee.id);
+    setError(null);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: nextActive })
+        .eq('id', employee.id);
+
+      if (error) throw error;
+
+      // Optimistic update (realtime subscription will also refresh)
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === employee.id ? { ...e, is_active: nextActive } : e))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'אירעה שגיאה בעדכון סטטוס העובד');
+    } finally {
+      setUpdatingActiveEmployeeId(null);
+    }
+  };
 
   const handleEditEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +160,8 @@ export default function EmployeesList() {
           full_name: addForm.full_name,
           phone_number: addForm.phone_number,
           password: addForm.password,
-          role: 'employee'
+          role: 'employee',
+          is_active: true
         }]);
 
       if (error) throw error;
@@ -216,8 +248,33 @@ export default function EmployeesList() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">{employee.full_name}</h3>
                   <p className="text-gray-600" dir="ltr">{employee.phone_number}</p>
+                  <div className="mt-3">
+                    {(employee.is_active ?? true) ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        פעיל
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                        לא פעיל
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 space-x-reverse">
+                  <button
+                    onClick={() => toggleEmployeeActive(employee)}
+                    disabled={updatingActiveEmployeeId === employee.id}
+                    className={
+                      (employee.is_active ?? true)
+                        ? "px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-md"
+                        : "px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-md"
+                    }
+                    title={(employee.is_active ?? true) ? 'הפוך ללא פעיל' : 'הפוך לפעיל'}
+                  >
+                    {updatingActiveEmployeeId === employee.id
+                      ? '...'
+                      : (employee.is_active ?? true) ? 'כבה' : 'הפעל'}
+                  </button>
                   <button
                     onClick={() => {
                       setSelectedEmployee(employee);

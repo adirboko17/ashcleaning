@@ -303,101 +303,108 @@ function ClientsList() {
 
   return (
     <div>
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">ניהול לקוחות</h1>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">ניהול לקוחות</h1>
+          <p className="text-gray-600">נהל את כל הלקוחות והסניפים שלך במקום אחד</p>
+        </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="btn btn-primary flex items-center w-full lg:w-auto"
+          className="btn btn-primary flex items-center w-full lg:w-auto shadow-lg hover:shadow-xl transition-shadow"
         >
           <Plus className="h-5 w-5 ml-2" />
           הוסף לקוח חדש
         </button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 bg-white p-6 rounded-xl shadow-md">
         <div className="relative">
           <input
             type="text"
             placeholder="חיפוש לפי שם, טלפון, או סניף..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
           />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
         </div>
-        <p className="mt-2 text-sm text-gray-500">
-          מציג {filteredClients.length} מתוך {clients.length} לקוחות
-        </p>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-sm text-gray-600 flex items-center">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {filteredClients.length} מתוך {clients.length} לקוחות
+            </span>
+          </p>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="animate-pulse">
-            <div className="h-12 bg-gray-100"></div>
+            <div className="h-16 bg-gradient-to-r from-gray-100 to-gray-50"></div>
             {[1, 2, 3].map((n) => (
-              <div key={n} className="border-t p-4">
-                <div className="h-5 bg-gray-200 rounded w-1/4 mb-3"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div key={n} className="border-t p-6">
+                <div className="h-6 bg-gray-200 rounded-lg w-1/4 mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded-lg w-1/3"></div>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                     שם לקוח
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
                     טלפון
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
                     סניפים עם עבודות קרובות
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">
                     פעולות
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{client.full_name}</div>
-                      <div className="sm:hidden text-sm text-gray-600 mt-1 flex items-center" dir="ltr">
-                        <Phone className="h-4 w-4 ml-2" />
+                  <tr key={client.id} className="hover:bg-blue-50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="text-base font-semibold text-gray-900">{client.full_name}</div>
+                      <div className="sm:hidden text-sm text-gray-600 mt-2 flex items-center" dir="ltr">
+                        <Phone className="h-4 w-4 ml-2 text-blue-500" />
                         {client.phone_number}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                      <div className="flex items-center text-sm text-gray-600" dir="ltr">
-                        <Phone className="h-4 w-4 ml-2" />
+                    <td className="px-6 py-5 whitespace-nowrap hidden sm:table-cell">
+                      <div className="flex items-center text-sm text-gray-700 font-medium" dir="ltr">
+                        <Phone className="h-4 w-4 ml-2 text-blue-500" />
                         {client.phone_number}
                       </div>
                     </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      <div className="space-y-2">
+                    <td className="px-6 py-5 hidden lg:table-cell">
+                      <div className="space-y-3">
                         {client.branches.length > 0 ? (
                           client.branches.map((branch) => (
                             <div
                               key={branch.id}
-                              className="flex items-center space-x-2 space-x-reverse text-sm"
+                              className="flex items-center space-x-3 space-x-reverse text-sm bg-gray-50 p-3 rounded-lg border border-gray-200"
                             >
-                              <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900">{branch.name}</p>
-                                <p className="text-gray-500 text-xs">{branch.address}</p>
+                              <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 truncate">{branch.name}</p>
+                                <p className="text-gray-600 text-xs truncate">{branch.address}</p>
                               </div>
                               {branch.next_job_date && (
-                                <div className="text-right shrink-0">
-                                  <div className="flex items-center text-blue-600 text-xs">
-                                    <Calendar className="h-3 w-3 ml-1" />
+                                <div className="text-right shrink-0 bg-blue-50 px-3 py-2 rounded-md border border-blue-200">
+                                  <div className="flex items-center text-blue-700 text-xs font-semibold">
+                                    <Calendar className="h-3.5 w-3.5 ml-1" />
                                     {format(new Date(branch.next_job_date), 'EEEE, d בMMMM', { locale: he })}
                                   </div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-blue-600 mt-1 font-medium">
                                     {format(new Date(branch.next_job_date), 'HH:mm')}
                                   </div>
                                 </div>
@@ -405,11 +412,11 @@ function ClientsList() {
                             </div>
                           ))
                         ) : (
-                          <span className="text-sm text-gray-500">אין עבודות מתוכננות</span>
+                          <span className="text-sm text-gray-500 italic bg-gray-50 px-3 py-2 rounded-md inline-block">אין עבודות מתוכננות</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-left">
+                    <td className="px-6 py-5 whitespace-nowrap text-left">
                       <div className="flex items-center space-x-2 space-x-reverse">
                         <button
                           onClick={() => {
@@ -421,27 +428,27 @@ function ClientsList() {
                             });
                             setShowEditModal(true);
                           }}
-                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-all"
                           title="ערוך לקוח"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => {
                             setClientToDelete(client);
                             setShowDeleteModal(true);
                           }}
-                          className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all"
                           title="מחק לקוח"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </button>
                         <Link
                           to={`/admin/clients/${client.id}`}
-                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="p-2 text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all"
                           title="צפה בפרטי הלקוח"
                         >
-                          <ChevronLeft className="h-4 w-4" />
+                          <ChevronLeft className="h-5 w-5" />
                         </Link>
                       </div>
                     </td>

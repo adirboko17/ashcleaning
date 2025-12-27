@@ -5,6 +5,11 @@ export interface User {
   phone_number: string;
   role: UserRole;
   full_name: string;
+  /**
+   * Defaults to true in DB.
+   * Optional for backwards compatibility while migrations roll out.
+   */
+  is_active?: boolean;
   created_at?: string;
 }
 
@@ -24,5 +29,6 @@ export interface Job {
   scheduled_date: string;
   completed_date?: string;
   receipt_url?: string;
+  note?: string;
   created_at?: string;
 }

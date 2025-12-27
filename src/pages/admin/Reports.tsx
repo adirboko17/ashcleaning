@@ -11,6 +11,7 @@ interface Job {
   scheduled_date: string;
   branch: {
     name: string;
+    address: string;
     client: {
       full_name: string;
     };
@@ -70,6 +71,7 @@ export default function Reports() {
           scheduled_date,
           branch:branches!inner (
             name,
+            address,
             client_id
           )
         `)
@@ -122,16 +124,25 @@ export default function Reports() {
         align: 'center'
       });
 
-      const tableData = jobs.map(job => {
+      const tableData = jobs.map((job, index) => {
         const date = new Date(job.scheduled_date);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        // הפיכה מלאה של המחרוזת כדי להתמודד עם RTL
+        const normalDate = `${day}/${month}/${year}`;
+        const formattedDate = normalDate.split('').reverse().join('');
+        
         return [
-          `\u200F${format(date, 'dd/MM/yyyy', { locale: he })}`,
-          job.branch.name
+          formattedDate,
+          job.branch.name,
+          job.branch.address,
+          `${index + 1}`
         ];
       });
 
       autoTable(doc, {
-        head: [['תאריך', 'סניף']],
+        head: [['תאריך', 'סניף', 'כתובת', 'מס\'']],
         body: tableData,
         startY: 40,
         theme: 'grid',
@@ -152,8 +163,10 @@ export default function Reports() {
           halign: 'right'
         },
         columnStyles: {
-          0: { halign: 'right' },
-          1: { halign: 'right' }
+          0: { halign: 'left', cellWidth: 30 },
+          1: { halign: 'right', cellWidth: 40 },
+          2: { halign: 'right', cellWidth: 'auto' },
+          3: { halign: 'center', cellWidth: 15 }
         },
         didDrawPage: (data) => {
           doc.setFontSize(10);
