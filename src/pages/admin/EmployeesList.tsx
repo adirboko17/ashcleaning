@@ -6,6 +6,7 @@ interface Employee {
   id: string;
   full_name: string;
   phone_number: string;
+  password?: string;
   is_active?: boolean;
 }
 
@@ -73,7 +74,7 @@ export default function EmployeesList() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, phone_number, is_active')
+        .select('id, full_name, phone_number, is_active, password')
         .eq('role', 'employee')
         .order('full_name');
 
@@ -442,6 +443,15 @@ export default function EmployeesList() {
                   placeholder="הכנס מספר טלפון"
                   dir="ltr"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  סיסמה נוכחית
+                </label>
+                <div className="input bg-gray-50 flex items-center justify-between">
+                  <span className="font-mono">{selectedEmployee.password}</span>
+                </div>
               </div>
               
               <div>

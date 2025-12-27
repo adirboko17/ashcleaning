@@ -695,8 +695,8 @@ function ClientDetails() {
 
       {/* Add Branch Modal */}
       {showAddBranchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">הוספת סניף חדש</h2>
               <button
@@ -705,7 +705,7 @@ function ClientDetails() {
                   setBranchForm({ name: '', address: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -772,8 +772,8 @@ function ClientDetails() {
 
       {/* Edit Branch Modal */}
       {showEditBranchModal && selectedBranch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">עריכת סניף</h2>
               <button
@@ -783,7 +783,7 @@ function ClientDetails() {
                   setEditBranchForm({ name: '', address: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -852,8 +852,8 @@ function ClientDetails() {
 
       {/* Delete Branch Modal */}
       {showDeleteBranchModal && selectedBranch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">מחיקת סניף</h2>
               <button
@@ -862,7 +862,7 @@ function ClientDetails() {
                   setSelectedBranch(null);
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -911,8 +911,8 @@ function ClientDetails() {
 
       {/* Edit Job Modal */}
       {showEditJobModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">עריכת עבודה</h2>
               <button
@@ -925,7 +925,7 @@ function ClientDetails() {
                   });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1003,8 +1003,8 @@ function ClientDetails() {
 
       {/* Delete Job Modal */}
       {showDeleteJobModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">מחיקת עבודה</h2>
               <button
@@ -1013,7 +1013,7 @@ function ClientDetails() {
                   setSelectedJob(null);
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>

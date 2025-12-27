@@ -106,6 +106,18 @@ export default function JobsList() {
     originX: number;
     originY: number;
   } | null>(null);
+
+  const [isBulkEditModalDragging, setIsBulkEditModalDragging] = useState(false);
+  const bulkEditModalCardRef = React.useRef<HTMLDivElement | null>(null);
+  const bulkEditModalPositionRef = React.useRef({ x: 0, y: 0 });
+  const bulkEditModalRafRef = React.useRef<number | null>(null);
+  const bulkEditModalDragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
   const [addForm, setAddForm] = useState<AddJobForm>({
     branch_id: '',
     employee_id: '',
@@ -183,6 +195,24 @@ export default function JobsList() {
   }, [showAddModal]);
 
   useEffect(() => {
+    // Reset the bulk edit modal position each time it opens
+    if (showBulkEditModal) {
+      setIsBulkEditModalDragging(false);
+      bulkEditModalDragRef.current = null;
+      bulkEditModalPositionRef.current = { x: 0, y: 0 };
+      if (bulkEditModalRafRef.current) {
+        cancelAnimationFrame(bulkEditModalRafRef.current);
+        bulkEditModalRafRef.current = null;
+      }
+      requestAnimationFrame(() => {
+        if (bulkEditModalCardRef.current) {
+          bulkEditModalCardRef.current.style.transform = 'translate3d(0px, 0px, 0)';
+        }
+      });
+    }
+  }, [showBulkEditModal]);
+
+  useEffect(() => {
     if (!receiptFile) {
       setReceiptPreviewUrl(null);
       return;
@@ -249,6 +279,59 @@ export default function JobsList() {
     }
     addModalDragRef.current = null;
     setIsAddModalDragging(false);
+  };
+
+  const applyBulkEditModalTransform = () => {
+    if (!bulkEditModalCardRef.current) return;
+    const { x, y } = bulkEditModalPositionRef.current;
+    bulkEditModalCardRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  };
+
+  const onBulkEditModalHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('[data-no-drag="true"]')) return;
+    if (e.button !== 0) return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+    bulkEditModalDragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: bulkEditModalPositionRef.current.x,
+      originY: bulkEditModalPositionRef.current.y,
+    };
+    setIsBulkEditModalDragging(true);
+  };
+
+  const onBulkEditModalHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = bulkEditModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    bulkEditModalPositionRef.current = { x: drag.originX + dx, y: drag.originY + dy };
+
+    if (bulkEditModalRafRef.current == null) {
+      bulkEditModalRafRef.current = requestAnimationFrame(() => {
+        bulkEditModalRafRef.current = null;
+        applyBulkEditModalTransform();
+      });
+    }
+  };
+
+  const onBulkEditModalHeaderPointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = bulkEditModalDragRef.current;
+    if (!drag) return;
+    if (drag.pointerId !== e.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    bulkEditModalDragRef.current = null;
+    setIsBulkEditModalDragging(false);
   };
 
   useEffect(() => {
@@ -476,7 +559,7 @@ export default function JobsList() {
     if (!selectedJobIds.length) return;
 
     if (!bulkEditForm.employee_id || !bulkEditForm.scheduled_date) {
-      setError('נא לבחור עובד ותאריך/שעה');
+      setError('נא לבחור עובד ותאריך');
       return;
     }
 
@@ -484,17 +567,29 @@ export default function JobsList() {
     setIsSubmitting(true);
 
     try {
-      // Convert local datetime-local value to UTC ISO
-      const localDate = new Date(bulkEditForm.scheduled_date);
-      const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+      const selectedDateString = bulkEditForm.scheduled_date; // YYYY-MM-DD
+      const [year, month, day] = selectedDateString.split('-').map(Number);
 
-      const { error } = await supabase
-        .from('jobs')
-        .update({
-          employee_id: bulkEditForm.employee_id,
-          scheduled_date: utcDate.toISOString(),
-        })
-        .in('id', selectedJobIds);
+      const updates = selectedJobIds.map(async (id) => {
+        const job = jobs.find((j) => j.id === id);
+        if (!job) return;
+
+        // Preserve wall-clock time by setting only the date parts on a local Date object
+        const originalDate = new Date(job.scheduled_date);
+        const newDate = new Date(originalDate.getTime());
+        newDate.setFullYear(year, month - 1, day);
+
+        return supabase
+          .from('jobs')
+          .update({
+            employee_id: bulkEditForm.employee_id,
+            scheduled_date: newDate.toISOString(),
+          })
+          .eq('id', id);
+      });
+
+      const results = await Promise.all(updates);
+      const error = results.find((r) => r?.error)?.error;
 
       if (error) throw error;
 
@@ -1246,8 +1341,8 @@ export default function JobsList() {
 
       {/* Edit Job Modal */}
       {showEditModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">עריכת עבודה</h2>
               <button
@@ -1261,7 +1356,7 @@ export default function JobsList() {
                   });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1352,17 +1447,31 @@ export default function JobsList() {
 
       {/* Bulk Edit Modal */}
       {showBulkEditModal && isBulkEditMode && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div
+            className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative"
+            ref={bulkEditModalCardRef}
+            style={{ willChange: 'transform' }}
+          >
+            <div
+              className={`flex justify-between items-center mb-4 select-none ${isBulkEditModalDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onPointerDown={onBulkEditModalHeaderPointerDown}
+              onPointerMove={onBulkEditModalHeaderPointerMove}
+              onPointerUp={onBulkEditModalHeaderPointerUpOrCancel}
+              onPointerCancel={onBulkEditModalHeaderPointerUpOrCancel}
+              style={{ touchAction: 'none' }}
+              title="גרור כדי להזיז את החלון"
+            >
               <h2 className="text-xl font-bold">עריכת עבודות מרובה</h2>
               <button
+                data-no-drag="true"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   setShowBulkEditModal(false);
                   setBulkEditForm({ employee_id: '', scheduled_date: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1394,10 +1503,10 @@ export default function JobsList() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  תאריך ושעה
+                  תאריך
                 </label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={bulkEditForm.scheduled_date}
                   onChange={(e) => setBulkEditForm(prev => ({ ...prev, scheduled_date: e.target.value }))}
                   className="input"
@@ -1440,8 +1549,8 @@ export default function JobsList() {
 
       {/* Delete Job Modal */}
       {showDeleteModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">מחיקת עבודה</h2>
               <button
@@ -1450,7 +1559,7 @@ export default function JobsList() {
                   setSelectedJob(null);
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1506,7 +1615,7 @@ export default function JobsList() {
       {/* Edit Receipt Modal */}
       {showReceiptModal && receiptJob && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
                 {receiptJob.receipt_url ? 'עריכת תמונת עבודה' : 'העלאת תמונת עבודה'}
@@ -1518,7 +1627,7 @@ export default function JobsList() {
                   setReceiptFile(null);
                   setReceiptError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
