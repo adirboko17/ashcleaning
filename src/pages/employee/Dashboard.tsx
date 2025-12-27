@@ -7,7 +7,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, endOfToday, a
 import { he } from 'date-fns/locale';
 import MobileNav from '../../components/MobileNav';
 import Logo from '../../components/Logo';
-import imageCompression from 'browser-image-compression';
+import { compressReceiptImage } from '../../utils/receiptImage';
 
 interface Job {
   id: string;
@@ -196,28 +196,6 @@ function UpcomingJobs() {
     fetchUpcomingJobs();
   }, [user?.id, sortOrder]);
 
-  async function compressImage(file: File): Promise<File> {
-    const baseOptions = {
-      maxSizeMB: 0.03, // 30KB = 0.03MB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
-
-    try {
-      return await imageCompression(file, baseOptions);
-    } catch (error) {
-      // Some mobile browsers (notably iOS Safari) can fail with WebWorker-related errors
-      // e.g. "false is not a constructor (evaluating 'new ...')".
-      console.warn('Image compression failed with WebWorker, retrying without WebWorker:', error);
-      try {
-        return await imageCompression(file, { ...baseOptions, useWebWorker: false });
-      } catch (error2) {
-        console.warn('Image compression failed without WebWorker, using original file:', error2);
-        return file; // fallback to original file so upload can still proceed
-      }
-    }
-  }
-
   async function completeJob() {
     if (!selectedJob || !receiptFile) return;
 
@@ -225,8 +203,8 @@ function UpcomingJobs() {
       setIsSubmitting(true);
       setError(null);
 
-      // Compress the image before uploading
-      const compressedFile = await compressImage(receiptFile);
+      // Compress the image before uploading (never throws; falls back to original)
+      const compressedFile = await compressReceiptImage(receiptFile);
 
       // Update job status first
       const { error: updateError } = await supabase

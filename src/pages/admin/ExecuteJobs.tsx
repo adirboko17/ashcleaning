@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Calendar, Search, Building2, User, Clock, Image, X, CheckCircle, MapPin } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
-import imageCompression from 'browser-image-compression';
+import { compressReceiptImage } from '../../utils/receiptImage';
 
 interface Job {
   id: string;
@@ -72,21 +72,6 @@ export default function ExecuteJobs() {
     }
   }
 
-  async function compressImage(file: File): Promise<File> {
-    const options = {
-      maxSizeMB: 0.03, // 30KB = 0.03MB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
-
-    try {
-      return await imageCompression(file, options);
-    } catch (error) {
-      console.error('Error compressing image:', error);
-      throw error;
-    }
-  }
-
   async function completeJob() {
     if (!selectedJob || !receiptFile) return;
 
@@ -94,8 +79,8 @@ export default function ExecuteJobs() {
       setIsSubmitting(true);
       setError(null);
 
-      // Compress the image before uploading
-      const compressedFile = await compressImage(receiptFile);
+      // Compress the image before uploading (never throws; falls back to original)
+      const compressedFile = await compressReceiptImage(receiptFile);
 
       // Update job status first
       const { error: updateError } = await supabase
