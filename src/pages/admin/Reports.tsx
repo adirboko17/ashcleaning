@@ -137,7 +137,7 @@ export default function Reports() {
           formattedDate,
           job.branch.name,
           job.branch.address,
-          `${index + 1}`
+          (index + 1).toString().split('').reverse().join('')
         ];
       });
 

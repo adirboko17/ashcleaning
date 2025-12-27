@@ -318,6 +318,14 @@ export default function Templates() {
 
     setPendingStops(prev => [...prev, ...uniqueNewStops].sort((a, b) => a.time.localeCompare(b.time)));
 
+    // Increment time by 5 minutes for the next addition
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    date.setMinutes(date.getMinutes() + 5);
+    const nextTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    setSelectedTime(nextTime);
+
     if (clearSelection) {
       setSelectedBranchIds([]);
       setBranchSearchTerm('');
