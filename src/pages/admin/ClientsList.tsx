@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Search, Building2, Edit, ChevronLeft, X, Phone, Calendar, Plus, Trash2, Download } from 'lucide-react';
+import { Search, Building2, Edit, ChevronLeft, ChevronDown, ChevronUp, X, Phone, Calendar, Plus, Trash2, Download } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -48,6 +48,7 @@ function ClientsList() {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [editForm, setEditForm] = useState<EditClientForm>({
     full_name: '',
     phone_number: '',
@@ -143,7 +144,6 @@ function ClientsList() {
             if (!b.next_job_date) return -1;
             return new Date(a.next_job_date).getTime() - new Date(b.next_job_date).getTime();
           })
-          .slice(0, 3)
       })) || [];
 
       setClients(processedClients);
@@ -292,6 +292,18 @@ function ClientsList() {
     }));
   };
 
+  const toggleClientExpansion = (clientId: string) => {
+    setExpandedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
   const filteredClients = clients.filter(client =>
     client.full_name.includes(searchTerm) ||
     client.phone_number.includes(searchTerm) ||
@@ -385,32 +397,78 @@ function ClientsList() {
                         {client.phone_number}
                       </div>
                     </td>
-                    <td className="px-6 py-5 hidden lg:table-cell">
+                    <td className="px-6 py-5 hidden lg:table-cell align-top">
                       <div className="space-y-3">
                         {client.branches.length > 0 ? (
-                          client.branches.map((branch) => (
-                            <div
-                              key={branch.id}
-                              className="flex items-center space-x-3 space-x-reverse text-sm bg-gray-50 p-3 rounded-lg border border-gray-200"
-                            >
-                              <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-gray-900 truncate">{branch.name}</p>
-                                <p className="text-gray-600 text-xs truncate">{branch.address}</p>
-                              </div>
-                              {branch.next_job_date && (
-                                <div className="text-right shrink-0 bg-blue-50 px-3 py-2 rounded-md border border-blue-200">
-                                  <div className="flex items-center text-blue-700 text-xs font-semibold">
-                                    <Calendar className="h-3.5 w-3.5 ml-1" />
-                                    {format(new Date(branch.next_job_date), 'EEEE, d בMMMM', { locale: he })}
-                                  </div>
-                                  <div className="text-xs text-blue-600 mt-1 font-medium">
-                                    {format(new Date(branch.next_job_date), 'HH:mm')}
-                                  </div>
+                          <>
+                            {client.branches.slice(0, 1).map((branch) => (
+                              <div
+                                key={branch.id}
+                                className="flex items-center space-x-3 space-x-reverse text-sm bg-gray-50 p-3 rounded-lg border border-gray-200"
+                              >
+                                <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-gray-900 truncate">{branch.name}</p>
+                                  <p className="text-gray-600 text-xs truncate">{branch.address}</p>
                                 </div>
-                              )}
-                            </div>
-                          ))
+                                {branch.next_job_date && (
+                                  <div className="text-right shrink-0 bg-blue-50 px-3 py-2 rounded-md border border-blue-200">
+                                    <div className="flex items-center text-blue-700 text-xs font-semibold">
+                                      <Calendar className="h-3.5 w-3.5 ml-1" />
+                                      {format(new Date(branch.next_job_date), 'EEEE, d בMMMM', { locale: he })}
+                                    </div>
+                                    <div className="text-xs text-blue-600 mt-1 font-medium">
+                                      {format(new Date(branch.next_job_date), 'HH:mm')}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            
+                            {client.branches.length > 1 && (
+                              <div className="space-y-3">
+                                {expandedClients.has(client.id) && client.branches.slice(1).map((branch) => (
+                                  <div
+                                    key={branch.id}
+                                    className="flex items-center space-x-3 space-x-reverse text-sm bg-gray-50 p-3 rounded-lg border border-gray-200 animate-in fade-in slide-in-from-top-2 duration-200"
+                                  >
+                                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-semibold text-gray-900 truncate">{branch.name}</p>
+                                      <p className="text-gray-600 text-xs truncate">{branch.address}</p>
+                                    </div>
+                                    {branch.next_job_date && (
+                                      <div className="text-right shrink-0 bg-blue-50 px-3 py-2 rounded-md border border-blue-200">
+                                        <div className="flex items-center text-blue-700 text-xs font-semibold">
+                                          <Calendar className="h-3.5 w-3.5 ml-1" />
+                                          {format(new Date(branch.next_job_date), 'EEEE, d בMMMM', { locale: he })}
+                                        </div>
+                                        <div className="text-xs text-blue-600 mt-1 font-medium">
+                                          {format(new Date(branch.next_job_date), 'HH:mm')}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                <button
+                                  onClick={() => toggleClientExpansion(client.id)}
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-semibold py-1 px-2 rounded-lg hover:bg-blue-50 transition-colors"
+                                >
+                                  {expandedClients.has(client.id) ? (
+                                    <>
+                                      <ChevronUp className="h-4 w-4" />
+                                      הצג פחות סניפים
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="h-4 w-4" />
+                                      הצג עוד {client.branches.length - 1} סניפים
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <span className="text-sm text-gray-500 italic bg-gray-50 px-3 py-2 rounded-md inline-block">אין עבודות מתוכננות</span>
                         )}
