@@ -1607,17 +1607,17 @@ export default function JobsList() {
     className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
     onClick={() => setSelectedImage(null)}
   >
-    <div className="relative max-w-[600px] w-full">
+    <div className="relative max-w-4xl w-full flex items-center justify-center">
       <button
         onClick={() => setSelectedImage(null)}
-        className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg"
+        className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg z-10"
       >
         <X className="h-6 w-6 text-gray-600" />
       </button>
       <img
         src={selectedImage}
         alt="קבלה"
-        className="w-full max-h-[800px] object-contain rounded-lg"
+        className="max-h-[90vh] w-auto max-w-full object-contain rounded-lg shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       />
     </div>

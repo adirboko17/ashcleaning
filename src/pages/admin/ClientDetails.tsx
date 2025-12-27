@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Search, Building2, ArrowRight, Plus, X, Image, Calendar, User, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
+import { Search, Building2, ArrowRight, Plus, X, Image, Calendar, User, CheckCircle, Clock, Edit, Trash2, Phone } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -1072,19 +1072,19 @@ function ClientDetails() {
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-4xl w-full">
+          <div className="relative max-w-4xl w-full flex items-center justify-center">
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg"
+              className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg z-10"
             >
               <X className="h-6 w-6 text-gray-600" />
             </button>
             <img
-  src={selectedImage}
-  alt="קבלה"
-  className="max-h-[80vh] w-auto max-w-full object-contain mx-auto rounded-lg"
-  onClick={(e) => e.stopPropagation()}
-/>
+              src={selectedImage}
+              alt="קבלה"
+              className="max-h-[90vh] w-auto max-w-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
