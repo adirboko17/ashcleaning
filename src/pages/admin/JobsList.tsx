@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Search, Calendar, Building2, User, CheckCircle, Clock, Plus, X, Image, AlertCircle, Edit, Trash2, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import imageCompression from 'browser-image-compression';
+import { compressReceiptImage } from '../../utils/receiptImage';
 
 interface Job {
   id: string;
@@ -534,27 +534,6 @@ export default function JobsList() {
       setIsSubmitting(false);
     }
   };
-
-  async function compressReceiptImage(file: File): Promise<File> {
-    const baseOptions = {
-      maxSizeMB: 0.03, // 30KB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
-
-    try {
-      return await imageCompression(file, baseOptions);
-    } catch (err) {
-      // Some mobile browsers (notably iOS Safari) can fail with WebWorker-related errors.
-      console.warn('Receipt image compression failed with WebWorker, retrying without WebWorker:', err);
-      try {
-        return await imageCompression(file, { ...baseOptions, useWebWorker: false });
-      } catch (err2) {
-        console.warn('Receipt image compression failed without WebWorker, using original file:', err2);
-        return file; // fallback to original file
-      }
-    }
-  }
 
   function tryGetReceiptFileNameFromPublicUrl(url: string): string | null {
     // Expected: .../storage/v1/object/public/receipts/<fileName>
