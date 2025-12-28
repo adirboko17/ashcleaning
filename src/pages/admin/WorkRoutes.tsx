@@ -250,12 +250,11 @@ export default function WorkRoutes() {
 
         <div className="p-2 sm:p-6">
           <div
-            className="relative w-full overflow-x-scroll overflow-y-hidden -mx-2 sm:mx-0 px-2 sm:px-0 pb-3 overscroll-x-contain"
+            className="relative w-full max-w-full overflow-x-auto overflow-y-hidden pb-3 overscroll-x-contain"
             style={{
               WebkitOverflowScrolling: 'touch',
               touchAction: 'pan-x pan-y'
             }}
-            dir="ltr"
           >
             <div className="inline-block w-max min-w-[980px] lg:w-full lg:min-w-0">
               {/* Calendar Header */}
@@ -313,7 +312,10 @@ export default function WorkRoutes() {
                         {assignedTemplate ? (
                           <div className="mt-auto space-y-1 sm:space-y-2">
                             <div className="bg-white rounded-lg p-1 sm:p-2 shadow-sm border border-blue-200">
-                              <div className="text-[10px] sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
+                              <div
+                                className="text-[10px] sm:text-sm font-semibold text-blue-700 whitespace-normal break-words leading-snug"
+                                title={assignedTemplate.name}
+                              >
                                 {assignedTemplate.name}
                               </div>
                               {assignedTemplate.stops && assignedTemplate.stops.length > 0 && (
