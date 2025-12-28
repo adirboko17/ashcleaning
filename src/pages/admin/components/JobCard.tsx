@@ -57,13 +57,13 @@ export default function JobCard({ job, onEdit, onDelete, onViewImage }: JobCardP
         {/* Client and Branch */}
         <div className="flex-1">
           <Link
-            to={`/admin/clients/${job.branch.client.id}`}
+            to={job.branch?.client?.id ? `/admin/clients/${job.branch.client.id}` : '#'}
             className="font-medium text-gray-900 hover:text-blue-600"
           >
-            {job.branch.client.full_name}
+            {job.branch?.client?.full_name || 'לקוח לא ידוע'}
           </Link>
           <p className="text-sm text-gray-600">
-            {job.branch.name} - {job.branch.address}
+            {job.branch?.name || 'סניף לא ידוע'} - {job.branch?.address || 'כתובת לא ידועה'}
           </p>
         </div>
 

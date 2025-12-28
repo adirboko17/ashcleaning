@@ -248,29 +248,33 @@ export default function WorkRoutes() {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6">
-          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-            <div className="min-w-[800px] lg:min-w-0">
+        <div className="p-2 sm:p-6">
+          <div
+            className="overflow-x-auto overflow-y-hidden -mx-2 sm:mx-0 px-2 sm:px-0 pb-2"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            dir="ltr"
+          >
+            <div className="w-max min-w-[980px] lg:w-full lg:min-w-0">
               {/* Calendar Header */}
-              <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-4">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3 mb-4">
                 {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => (
                   <div 
                     key={day} 
-                    className={`text-center py-2 rounded-lg ${
+                    className={`text-center py-1 sm:py-2 rounded-lg ${
                       index === 5 ? 'bg-blue-50' : index === 6 ? 'bg-indigo-50' : 'bg-gray-50'
                     }`}
                   >
                     <span className="hidden sm:inline font-semibold text-gray-700 text-sm">{day}</span>
-                    <span className="sm:hidden font-semibold text-gray-700">{day.slice(0, 1)}</span>
+                    <span className="sm:hidden font-semibold text-gray-700 text-xs">{day.slice(0, 1)}</span>
                   </div>
                 ))}
               </div>
 
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-2 sm:gap-3">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3">
                 {getDaysInMonth().map((date, index) => {
                   if (!date) {
-                    return <div key={`empty-${index}`} className="p-2 sm:p-4" />;
+                    return <div key={`empty-${index}`} className="p-1 sm:p-4" />;
                   }
 
                   const dateStr = format(date, 'yyyy-MM-dd');
@@ -283,7 +287,7 @@ export default function WorkRoutes() {
                   return (
                     <div
                       key={dateStr}
-                      className={`min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 border-2 rounded-xl transition-all ${
+                      className={`min-h-[80px] sm:min-h-[120px] p-1.5 sm:p-4 border-2 rounded-xl transition-all ${
                         isToday 
                           ? 'border-indigo-500 ring-2 ring-indigo-200' 
                           : assignedTemplate
@@ -294,7 +298,7 @@ export default function WorkRoutes() {
                       }`}
                     >
                       <div className="h-full flex flex-col">
-                        <div className={`text-center font-bold text-lg mb-2 ${
+                        <div className={`text-center font-bold text-sm sm:text-lg mb-1 sm:mb-2 ${
                           isToday 
                             ? 'text-indigo-600' 
                             : assignedTemplate 
@@ -304,13 +308,13 @@ export default function WorkRoutes() {
                           {format(date, 'd')}
                         </div>
                         {assignedTemplate ? (
-                          <div className="mt-auto space-y-2">
-                            <div className="bg-white rounded-lg p-2 shadow-sm border border-blue-200">
-                              <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
+                          <div className="mt-auto space-y-1 sm:space-y-2">
+                            <div className="bg-white rounded-lg p-1 sm:p-2 shadow-sm border border-blue-200">
+                              <div className="text-[10px] sm:text-sm font-semibold text-blue-700 truncate" title={assignedTemplate.name}>
                                 {assignedTemplate.name}
                               </div>
                               {assignedTemplate.stops && assignedTemplate.stops.length > 0 && (
-                                <div className="text-xs text-gray-600 mt-1">
+                                <div className="text-[9px] sm:text-xs text-gray-600 mt-0.5 sm:mt-1">
                                   {assignedTemplate.stops.length} תחנות
                                 </div>
                               )}
@@ -318,14 +322,14 @@ export default function WorkRoutes() {
                             <button
                               onClick={() => removeTemplateFromDate(date)}
                               disabled={isSubmitting}
-                              className="w-full text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 py-1.5 rounded-md transition-colors border border-red-300 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full text-[10px] sm:text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 py-1 sm:py-1.5 rounded-md transition-colors border border-red-300 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              הסר שיבוץ
+                              הסר
                             </button>
                           </div>
                         ) : (
                           <select
-                            className="mt-auto w-full text-xs sm:text-sm border-2 border-gray-300 rounded-lg py-2 px-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="mt-auto w-full text-[10px] sm:text-sm border-2 border-gray-300 rounded-lg py-1 sm:py-2 px-0.5 sm:px-1 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             value=""
                             onChange={(e) => {
                               const templateIndex = parseInt(e.target.value);
@@ -335,7 +339,7 @@ export default function WorkRoutes() {
                             }}
                             disabled={isSubmitting}
                           >
-                            <option value="">בחר תבנית...</option>
+                            <option value="">בחר...</option>
                             {templates.map((template, index) => (
                               <option key={template.id} value={index}>
                                 {template.name}

@@ -321,11 +321,11 @@ function AdminOverview() {
                         <div className="flex items-center mb-1">
                           <Building2 className="h-4 w-4 text-blue-600 ml-2" />
                           <p className="font-medium text-blue-600">
-                            {job.branch.client.full_name}
+                            {job.branch?.client?.full_name || 'לקוח לא ידוע'}
                           </p>
                         </div>
                         <p className="text-sm text-gray-600">
-                          {job.branch.name} - {job.branch.address}
+                          {job.branch?.name || 'סניף לא ידוע'} - {job.branch?.address || 'כתובת לא ידועה'}
                         </p>
                       </div>
 

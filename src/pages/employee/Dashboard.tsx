@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
-import { Calendar, CheckCircle, LogOut, Building2, Upload, X, Image, MapPin, ArrowUpDown } from 'lucide-react';
+import { Calendar, CheckCircle, LogOut, Building2, Upload, X, Image, MapPin } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, endOfToday, addDays } from 'date-fns';
@@ -363,16 +363,6 @@ function UpcomingJobs() {
               </span>
               <span className="text-xs text-yellow-600 mr-1">עבודות</span>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all"
-              title="שנה סדר מיון"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              מיון: {sortOrder === 'asc' ? 'קרוב → רחוק' : 'רחוק → קרוב'}
-            </button>
           </div>
         </div>
       </div>
@@ -415,14 +405,14 @@ function UpcomingJobs() {
                               <Building2 className="h-5 w-5 text-blue-600" />
                             </div>
                             <h3 className="font-bold text-lg text-gray-900">
-                              {job.branch.client.full_name}
+                              {job.branch?.client?.full_name || 'לקוח לא ידוע'}
                             </h3>
                           </div>
                           <div className="flex items-start text-gray-600 mb-3 bg-gray-50 p-3 rounded-lg">
                             <MapPin className="h-4 w-4 ml-2 mt-1 shrink-0 text-gray-500" />
                             <div>
-                              <p className="text-sm font-semibold text-gray-800">{job.branch.name}</p>
-                              <p className="text-sm text-gray-600">{job.branch.address}</p>
+                              <p className="text-sm font-semibold text-gray-800">{job.branch?.name || 'סניף לא ידוע'}</p>
+                              <p className="text-sm text-gray-600">{job.branch?.address || 'כתובת לא ידועה'}</p>
                             </div>
                           </div>
                           
@@ -434,15 +424,6 @@ function UpcomingJobs() {
                               </p>
                             </div>
                           )}
-                        </div>
-                        <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 text-white px-4 py-3 rounded-xl shadow-md mr-3">
-                          <p className="text-2xl font-bold text-center">
-                            {format(
-                              new Date(new Date(job.scheduled_date).getTime() + new Date().getTimezoneOffset() * 60000),
-                              'HH:mm'
-                            )}
-                          </p>
-                          <p className="text-xs text-yellow-100 text-center">שעה</p>
                         </div>
                       </div>
                       <button
@@ -490,9 +471,9 @@ function UpcomingJobs() {
 
             <div className="space-y-4">
               <div>
-                <p className="font-medium text-gray-900">{selectedJob.branch.client.full_name}</p>
-                <p className="text-sm text-gray-600">{selectedJob.branch.name}</p>
-                <p className="text-sm text-gray-500">{selectedJob.branch.address}</p>
+                <p className="font-medium text-gray-900">{selectedJob.branch?.client?.full_name || 'לקוח לא ידוע'}</p>
+                <p className="text-sm text-gray-600">{selectedJob.branch?.name || 'סניף לא ידוע'}</p>
+                <p className="text-sm text-gray-500">{selectedJob.branch?.address || 'כתובת לא ידועה'}</p>
               </div>
 
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
@@ -710,14 +691,14 @@ function CompletedJobs() {
                               <Building2 className="h-5 w-5 text-blue-600" />
                             </div>
                             <h3 className="font-bold text-lg text-gray-900">
-                              {job.branch.client.full_name}
+                              {job.branch?.client?.full_name || 'לקוח לא ידוע'}
                             </h3>
                           </div>
                           <div className="flex items-start text-gray-600 mb-3 bg-gray-50 p-3 rounded-lg">
                             <MapPin className="h-4 w-4 ml-2 mt-1 shrink-0 text-gray-500" />
                             <div>
-                              <p className="text-sm font-semibold text-gray-800">{job.branch.name}</p>
-                              <p className="text-sm text-gray-600">{job.branch.address}</p>
+                              <p className="text-sm font-semibold text-gray-800">{job.branch?.name || 'סניף לא ידוע'}</p>
+                              <p className="text-sm text-gray-600">{job.branch?.address || 'כתובת לא ידועה'}</p>
                             </div>
                           </div>
                           
@@ -737,15 +718,6 @@ function CompletedJobs() {
                               הושלם ב-{format(new Date(job.completed_date!), 'HH:mm')}
                             </span>
                           </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white px-4 py-3 rounded-xl shadow-md mr-3">
-                          <p className="text-2xl font-bold text-center">
-                            {format(
-                              new Date(new Date(job.scheduled_date).getTime() + new Date().getTimezoneOffset() * 60000),
-                              'HH:mm'
-                            )}
-                          </p>
-                          <p className="text-xs text-green-100 text-center">שעה</p>
                         </div>
                       </div>
                       {job.receipt_url && (

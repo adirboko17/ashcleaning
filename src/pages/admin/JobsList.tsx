@@ -868,10 +868,10 @@ export default function JobsList() {
   const filteredJobs = jobs.filter(job => {
     const term = searchTerm.toLowerCase();
     return (
-      job.branch.name.toLowerCase().includes(term) ||
-      job.branch.address.toLowerCase().includes(term) ||
-      job.branch.client.full_name.toLowerCase().includes(term) ||
-      job.employee.full_name.toLowerCase().includes(term) ||
+      (job.branch?.name || '').toLowerCase().includes(term) ||
+      (job.branch?.address || '').toLowerCase().includes(term) ||
+      (job.branch?.client?.full_name || '').toLowerCase().includes(term) ||
+      (job.employee?.full_name || '').toLowerCase().includes(term) ||
       (job.note || '').toLowerCase().includes(term)
     );
   });
@@ -1157,14 +1157,14 @@ export default function JobsList() {
                         {/* Client and Branch */}
                         <div>
                           <Link
-                            to={`/admin/clients/${job.branch.client.id}`}
+                            to={job.branch?.client?.id ? `/admin/clients/${job.branch.client.id}` : '#'}
                             className="text-lg font-bold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
                           >
                             <Building2 className="h-5 w-5" />
-                            {job.branch.client.full_name}
+                            {job.branch?.client?.full_name || 'לקוח לא ידוע'}
                           </Link>
                           <p className="text-sm text-gray-600 mt-1 mr-7">
-                            {job.branch.name} · {job.branch.address}
+                            {job.branch?.name || 'סניף לא ידוע'} · {job.branch?.address || 'כתובת לא ידועה'}
                           </p>
                         </div>
 
@@ -1172,7 +1172,7 @@ export default function JobsList() {
                         <div className="flex items-center gap-2 text-gray-700">
                           <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
                             <User className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium">{job.employee.full_name}</span>
+                            <span className="text-sm font-medium">{job.employee?.full_name || 'עובד לא משויך'}</span>
                           </div>
                         </div>
 
@@ -1223,8 +1223,8 @@ export default function JobsList() {
                                   onClick={() => {
                                     setSelectedJob(job);
                                     setEditForm({
-                                      employee_id: job.employee.id,
-                                      scheduled_date: job.scheduled_date.slice(0, 16),
+                                      employee_id: job.employee?.id || '',
+                                      scheduled_date: job.scheduled_date ? job.scheduled_date.slice(0, 16) : '',
                                       note: job.note || ''
                                     });
                                     setShowEditModal(true);
