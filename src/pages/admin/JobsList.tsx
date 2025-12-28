@@ -918,8 +918,8 @@ export default function JobsList() {
 
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Filters Section */}
-        <div className="p-6 bg-gradient-to-b from-gray-50 to-white border-b">
-          <div className="space-y-4">
+        <div className="p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white border-b">
+          <div className="space-y-3 sm:space-y-4">
             {/* Search Bar */}
             <div className="relative">
               <input
@@ -927,7 +927,7 @@ export default function JobsList() {
                 placeholder="חיפוש לפי לקוח, סניף, עובד או הערה..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-5 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400"
+                className="w-full px-4 sm:px-5 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 text-sm sm:text-base"
               />
               <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
             </div>
@@ -947,10 +947,10 @@ export default function JobsList() {
               </div>
 
               {/* Status Filter Tabs */}
-              <div className="flex gap-2 bg-gray-100 p-1.5 rounded-xl">
+              <div className="grid grid-cols-3 gap-1 bg-gray-100 p-1 rounded-xl sm:flex sm:gap-2 sm:p-1.5">
                 <button
                   onClick={() => setStatusFilter('all')}
-                  className={`flex-1 px-5 py-2 rounded-lg font-medium transition-all ${
+                  className={`w-full px-2 sm:px-5 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                     statusFilter === 'all'
                       ? 'bg-white text-blue-700 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -960,7 +960,7 @@ export default function JobsList() {
                 </button>
                 <button
                   onClick={() => setStatusFilter('pending')}
-                  className={`flex-1 px-5 py-2 rounded-lg font-medium transition-all ${
+                  className={`w-full px-2 sm:px-5 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                     statusFilter === 'pending'
                       ? 'bg-white text-yellow-700 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -970,7 +970,7 @@ export default function JobsList() {
                 </button>
                 <button
                   onClick={() => setStatusFilter('completed')}
-                  className={`flex-1 px-5 py-2 rounded-lg font-medium transition-all ${
+                  className={`w-full px-2 sm:px-5 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
                     statusFilter === 'completed'
                       ? 'bg-white text-green-700 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
@@ -983,8 +983,8 @@ export default function JobsList() {
           </div>
 
           {/* Stats and Pagination */}
-          <div className="mt-5 pt-5 border-t border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="mt-5 pt-5 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <div className="bg-blue-50 px-4 py-2 rounded-lg">
                 <span className="text-sm font-semibold text-blue-700">
                   {filteredJobs.length} מתוך {totalJobsCount}
@@ -997,7 +997,7 @@ export default function JobsList() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => {
@@ -1005,7 +1005,7 @@ export default function JobsList() {
                   setSelectedJobIds([]);
                   setIsBulkEditMode((prev) => !prev);
                 }}
-                className={`px-4 py-2 font-medium rounded-lg transition-all inline-flex items-center gap-2 border-2 ${
+                className={`w-full sm:w-auto justify-center px-4 py-2 font-medium rounded-lg transition-all inline-flex items-center gap-2 border-2 ${
                   isBulkEditMode
                     ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -1014,24 +1014,31 @@ export default function JobsList() {
                 title="עריכה מרובה"
               >
                 <Edit className="h-4 w-4" />
-                {isBulkEditMode ? 'מצב עריכה מרובה פעיל' : 'עריכה מרובה'}
+                <span className="hidden sm:inline">
+                  {isBulkEditMode ? 'מצב עריכה מרובה פעיל' : 'עריכה מרובה'}
+                </span>
+                <span className="sm:hidden">
+                  {isBulkEditMode ? 'עריכה פעילה' : 'עריכה'}
+                </span>
               </button>
-              <button
-                type="button"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                disabled={page <= 1 || isLoading}
-              >
-                הקודם
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                disabled={page >= totalPages || isLoading}
-              >
-                הבא
-              </button>
+              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="w-full px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  disabled={page <= 1 || isLoading}
+                >
+                  הקודם
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  disabled={page >= totalPages || isLoading}
+                >
+                  הבא
+                </button>
+              </div>
             </div>
           </div>
         </div>
