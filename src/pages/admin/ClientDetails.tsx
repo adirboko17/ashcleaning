@@ -197,7 +197,6 @@ function ClientDetails() {
         .from('users')
         .select('id, full_name')
         .eq('role', 'employee')
-        .eq('is_active', true)
         .order('full_name');
 
       if (error) throw error;

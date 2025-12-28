@@ -73,6 +73,12 @@ export default function Templates() {
   const [selectedStopKeys, setSelectedStopKeys] = useState<string[]>([]);
   const [moveTargetTemplateIndex, setMoveTargetTemplateIndex] = useState<number | null>(null);
 
+  // Bulk edit employee
+  const [isBulkEditEmployeeOpen, setIsBulkEditEmployeeOpen] = useState(false);
+  const [bulkEditEmployeeSearchTerm, setBulkEditEmployeeSearchTerm] = useState('');
+  const [bulkEditEmployeeId, setBulkEditEmployeeId] = useState<string | null>(null);
+  const [bulkEditError, setBulkEditError] = useState<string | null>(null);
+
   // Edit stop modal
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingStopKey, setEditingStopKey] = useState<string | null>(null);
@@ -160,7 +166,6 @@ export default function Templates() {
         .from('users')
         .select('id, full_name')
         .eq('role', 'employee')
-        .eq('is_active', true)
         .order('full_name');
 
       if (error) throw error;
@@ -548,56 +553,65 @@ export default function Templates() {
   };
 
   const handleMoveSelectedStops = async (e: React.MouseEvent) => {
+    // ... code ...
+  };
+
+  const handleBulkUpdateEmployee = async (e: React.MouseEvent) => {
     e.preventDefault();
 
     if (selectedTemplateIndex === null) return;
-    if (!isSelectMode) return;
     if (selectedStopKeys.length === 0) return;
-    if (moveTargetTemplateIndex === null) {
-      setError('יש לבחור תבנית יעד להעברה');
+    if (!bulkEditEmployeeId) {
+      setBulkEditError('יש לבחור עובד');
       return;
     }
-    if (moveTargetTemplateIndex === selectedTemplateIndex) {
-      setError('לא ניתן להעביר לתבנית הנוכחית');
+
+    const employee = employees.find(emp => emp.id === bulkEditEmployeeId);
+    if (!employee) {
+      setBulkEditError('לא נמצאו פרטי עובד');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setError(null);
+      setBulkEditError(null);
 
-      const sourceStops = templates[selectedTemplateIndex].stops;
-      const toMove = sourceStops.filter(s => selectedStopKeySet.has(keyOf(s)));
-      const remaining = sourceStops.filter(s => !selectedStopKeySet.has(keyOf(s)));
+      const currentStops = [...templates[selectedTemplateIndex].stops];
+      const selectedKeysSet = new Set(selectedStopKeys);
 
-      const targetStops = templates[moveTargetTemplateIndex].stops;
-      const targetKeySet = new Set(targetStops.map(keyOf));
-      const uniqueToAdd = toMove.filter(s => !targetKeySet.has(keyOf(s)));
-      const skipped = toMove.length - uniqueToAdd.length;
+      // We need to be careful about duplicates if the same branch exists with the same time but different employee
+      // However, usually within a template, branch+time should be unique enough, but the current keyOf uses employee_id too.
+      // Let's update the stops and check for duplicates.
+      
+      const nextStops = currentStops.map(stop => {
+        if (selectedKeysSet.has(keyOf(stop))) {
+          return {
+            ...stop,
+            employee_id: employee.id,
+            employee: { id: employee.id, full_name: employee.full_name }
+          };
+        }
+        return stop;
+      });
 
-      const nextTargetStops = [...targetStops, ...uniqueToAdd].sort((a, b) => a.time.localeCompare(b.time));
-
-      // Persist: source first, then target
-      if (templates[selectedTemplateIndex].id || remaining.length > 0) {
-        await upsertTemplateStops(selectedTemplateIndex, remaining);
-      } else {
-        setTemplates(prev => {
-          const next = [...prev];
-          next[selectedTemplateIndex] = { name: `תבנית ${selectedTemplateIndex + 1}`, stops: [] };
-          return next;
-        });
+      // Check for duplicates after update
+      const keys = nextStops.map(keyOf);
+      const uniqueKeys = new Set(keys);
+      if (uniqueKeys.size < nextStops.length) {
+        setBulkEditError('העדכון יוצר כפילויות (אותה תחנה באותה שעה עם אותו עובד)');
+        return;
       }
-      await upsertTemplateStops(moveTargetTemplateIndex, nextTargetStops);
 
+      await upsertTemplateStops(selectedTemplateIndex, nextStops);
+
+      setIsBulkEditEmployeeOpen(false);
+      setBulkEditEmployeeId(null);
+      setBulkEditEmployeeSearchTerm('');
       clearSelection();
       setIsSelectMode(false);
-
-      if (skipped > 0) {
-        setError(`הועברו ${uniqueToAdd.length} תחנות. ${skipped} דולגו כי כבר קיימות בתבנית היעד.`);
-      }
     } catch (err) {
-      console.error('Error moving stops:', err);
-      setError('אירעה שגיאה בהעברת התחנות');
+      console.error('Error bulk updating employee:', err);
+      setBulkEditError('אירעה שגיאה בעדכון העובד');
     } finally {
       setIsSubmitting(false);
     }
@@ -1082,10 +1096,19 @@ export default function Templates() {
                   נבחרו: <span className="font-semibold text-slate-900">{selectedStopKeys.length}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end flex-1">
-                  <button
-                    type="button"
-                    onClick={() => {
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsBulkEditEmployeeOpen(true)}
+                      disabled={selectedStopKeys.length === 0 || isSubmitting}
+                      className="px-3 py-2 text-sm bg-white text-slate-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4" />
+                      ערוך עובד
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                       const keys = filteredStops.map(s => keyOf(s));
                       setSelectedStopKeys(prev => {
                         const set = new Set(prev);
@@ -1225,6 +1248,115 @@ export default function Templates() {
                 <p className="text-sm text-gray-400 mt-1">הוסף תחנות חדשות באמצעות הטופס למעלה</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Employee Modal */}
+      {isBulkEditEmployeeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/30"
+            onClick={() => {
+              setIsBulkEditEmployeeOpen(false);
+              setBulkEditEmployeeId(null);
+              setBulkEditEmployeeSearchTerm('');
+              setBulkEditError(null);
+            }}
+            aria-label="סגור"
+          />
+
+          <div className="relative w-full max-w-md bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">שינוי עובד למספר תחנות</h3>
+                <p className="text-sm text-gray-500 mt-0.5">נבחרו {selectedStopKeys.length} תחנות</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkEditEmployeeOpen(false);
+                  setBulkEditEmployeeId(null);
+                  setBulkEditEmployeeSearchTerm('');
+                  setBulkEditError(null);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+                title="סגור"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-900">בחר עובד חדש</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={bulkEditEmployeeSearchTerm}
+                    onChange={(e) => {
+                      setBulkEditEmployeeSearchTerm(e.target.value);
+                      setBulkEditEmployeeId(null);
+                    }}
+                    placeholder="חפש עובד..."
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-shadow"
+                  />
+                  <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
+                  {employees
+                    .filter(emp => emp.full_name.toLowerCase().includes(bulkEditEmployeeSearchTerm.toLowerCase()))
+                    .map(emp => (
+                      <button
+                        key={`bulk-edit-emp-${emp.id}`}
+                        type="button"
+                        onClick={() => {
+                          setBulkEditEmployeeId(emp.id);
+                          setBulkEditEmployeeSearchTerm(emp.full_name);
+                        }}
+                        className={`w-full text-right px-4 py-3 transition-colors ${
+                          bulkEditEmployeeId === emp.id
+                            ? 'bg-slate-50 text-slate-900 font-medium'
+                            : 'hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        {emp.full_name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {bulkEditError && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+                  {bulkEditError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-white flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkEditEmployeeOpen(false);
+                  setBulkEditEmployeeId(null);
+                  setBulkEditEmployeeSearchTerm('');
+                  setBulkEditError(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isSubmitting}
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkUpdateEmployee}
+                className="px-4 py-2 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                disabled={isSubmitting || !bulkEditEmployeeId}
+              >
+                עדכן עובד לכל התחנות
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -177,8 +177,7 @@ function AdminOverview() {
           supabase
             .from('users')
             .select('id', { count: 'exact' })
-            .eq('role', 'employee')
-            .eq('is_active', true),
+            .eq('role', 'employee'),
           
           // Get total branches
           supabase

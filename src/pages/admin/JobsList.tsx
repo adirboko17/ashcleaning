@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Search, Calendar, Building2, User, CheckCircle, Clock, Plus, X, Image, AlertCircle, Edit, Trash2, ArrowUpDown } from 'lucide-react';
+import { Search, Calendar, Building2, User, CheckCircle, Clock, Plus, X, Image, AlertCircle, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { compressReceiptImage } from '../../utils/receiptImage';
@@ -577,7 +577,6 @@ export default function JobsList() {
           .from('users')
           .select('id, full_name')
           .eq('role', 'employee')
-          .eq('is_active', true)
           .order('full_name'),
         supabase
           .from('users')
@@ -999,18 +998,6 @@ export default function JobsList() {
             </div>
             
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
-                }}
-                className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all inline-flex items-center gap-2"
-                disabled={isLoading}
-                title="שנה סדר מיון"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                מיון: {sortOrder === 'asc' ? 'קרוב → רחוק' : 'רחוק → קרוב'}
-              </button>
               <button
                 type="button"
                 onClick={() => {

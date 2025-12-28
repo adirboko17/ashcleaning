@@ -250,11 +250,14 @@ export default function WorkRoutes() {
 
         <div className="p-2 sm:p-6">
           <div
-            className="overflow-x-auto overflow-y-hidden -mx-2 sm:mx-0 px-2 sm:px-0 pb-2"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="relative w-full overflow-x-scroll overflow-y-hidden -mx-2 sm:mx-0 px-2 sm:px-0 pb-3 overscroll-x-contain"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-x pan-y'
+            }}
             dir="ltr"
           >
-            <div className="w-max min-w-[980px] lg:w-full lg:min-w-0">
+            <div className="inline-block w-max min-w-[980px] lg:w-full lg:min-w-0">
               {/* Calendar Header */}
               <div className="grid grid-cols-7 gap-1 sm:gap-3 mb-4">
                 {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map((day, index) => (
