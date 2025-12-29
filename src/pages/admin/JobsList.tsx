@@ -88,6 +88,8 @@ export default function JobsList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRevertToPendingModal, setShowRevertToPendingModal] = useState(false);
+  const [jobToRevert, setJobToRevert] = useState<Job | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptJob, setReceiptJob] = useState<Job | null>(null);
@@ -778,6 +780,14 @@ export default function JobsList() {
     setError(null);
 
     try {
+      // Best-effort cleanup: remove receipt file from storage (if exists) to avoid orphans
+      if (selectedJob.receipt_url) {
+        const fileName = tryGetReceiptFileNameFromPublicUrl(selectedJob.receipt_url);
+        if (fileName) {
+          await supabase.storage.from('receipts').remove([fileName]);
+        }
+      }
+
       const { error } = await supabase
         .from('jobs')
         .delete()
@@ -804,6 +814,42 @@ export default function JobsList() {
     if (!fileName || fileName.includes('/') || fileName.includes('\\')) return null;
     return fileName;
   }
+
+  const handleRevertCompletedJobToPending = async () => {
+    if (!jobToRevert) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Delete receipt image file (if any)
+      if (jobToRevert.receipt_url) {
+        const fileName = tryGetReceiptFileNameFromPublicUrl(jobToRevert.receipt_url);
+        if (fileName) {
+          await supabase.storage.from('receipts').remove([fileName]);
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({
+          status: 'pending',
+          completed_date: null,
+          receipt_url: null,
+        })
+        .eq('id', jobToRevert.id);
+
+      if (updateError) throw updateError;
+
+      setShowRevertToPendingModal(false);
+      setJobToRevert(null);
+      fetchJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'אירעה שגיאה בהחזרת העבודה לסטטוס ממתין');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   async function handleUpdateReceiptImage() {
     if (!receiptJob || !receiptFile) return;
@@ -877,9 +923,9 @@ export default function JobsList() {
 
   const totalPages = Math.max(1, Math.ceil(totalJobsCount / pageSize));
   const selectedSet = new Set(selectedJobIds);
-  const selectableJobIdsOnPage = filteredJobs
-    .filter((j) => j.status === 'pending')
-    .map((j) => j.id);
+  // Bulk edit should be able to target both pending and completed jobs
+  // (e.g. to fix employee/date on completed jobs as requested).
+  const selectableJobIdsOnPage = filteredJobs.map((j) => j.id);
   const allSelectedOnPage =
     selectableJobIdsOnPage.length > 0 &&
     selectableJobIdsOnPage.every((id) => selectedSet.has(id));
@@ -1048,7 +1094,7 @@ export default function JobsList() {
             <div className="mb-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="text-sm text-gray-700">
                 נבחרו <span className="font-semibold">{selectedJobIds.length}</span> עבודות בעמוד זה
-                <span className="text-xs text-gray-500 mr-2">(אפשר לבחור רק עבודות ממתינות)</span>
+                <span className="text-xs text-gray-500 mr-2">(אפשר לבחור גם ממתינות וגם הושלמו)</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -1109,8 +1155,7 @@ export default function JobsList() {
                         type="checkbox"
                         checked={selectedSet.has(job.id)}
                         onChange={() => toggleJobSelection(job.id)}
-                        disabled={job.status !== 'pending'}
-                        title={job.status !== 'pending' ? 'ניתן לבחור רק עבודות ממתינות' : 'בחר עבודה'}
+                        title="בחר עבודה"
                         className="h-5 w-5 accent-blue-600"
                       />
                     </div>
@@ -1263,6 +1308,28 @@ export default function JobsList() {
                                 >
                                   <Edit className="h-4 w-4" />
                                   <span>{job.receipt_url ? 'עריכה' : 'העלאה'}</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setError(null);
+                                    setJobToRevert(job);
+                                    setShowRevertToPendingModal(true);
+                                  }}
+                                  className="px-3 py-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                  title="העבר לסטטוס ממתין (ימחק את התמונה)"
+                                >
+                                  <Clock className="h-4 w-4" />
+                                  <span>העבר לממתין</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="מחק עבודה"
+                                >
+                                  <Trash2 className="h-5 w-5" />
                                 </button>
                               </div>
                             )}
@@ -1652,7 +1719,7 @@ export default function JobsList() {
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-              נבחרו <span className="font-semibold">{selectedJobIds.length}</span> עבודות (ממתינות בלבד).
+              נבחרו <span className="font-semibold">{selectedJobIds.length}</span> עבודות (ממתינות והושלמו).
             </p>
 
             <form onSubmit={handleBulkEditJobs} className="space-y-4 max-h-[calc(100vh-16rem)] overflow-y-auto pr-1">
@@ -1780,6 +1847,65 @@ export default function JobsList() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'מוחק...' : 'מחק עבודה'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revert to Pending Modal (for completed jobs) */}
+      {showRevertToPendingModal && jobToRevert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">החזרה לסטטוס ממתין</h2>
+              <button
+                onClick={() => {
+                  setShowRevertToPendingModal(false);
+                  setJobToRevert(null);
+                  setError(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-6 space-y-2">
+              <p className="text-gray-700">
+                פעולה זו תחזיר את העבודה לסטטוס <span className="font-semibold">ממתין</span>.
+              </p>
+              <p className="text-sm text-yellow-700">
+                אם קיימת תמונת עבודה/קבלה, היא תימחק.
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-4">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-4 space-x-reverse">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRevertToPendingModal(false);
+                  setJobToRevert(null);
+                  setError(null);
+                }}
+                className="btn btn-secondary"
+                disabled={isSubmitting}
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleRevertCompletedJobToPending}
+                className="btn bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'מעדכן...' : 'העבר לממתין'}
               </button>
             </div>
           </div>
