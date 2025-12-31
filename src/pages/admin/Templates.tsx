@@ -553,7 +553,80 @@ export default function Templates() {
   };
 
   const handleMoveSelectedStops = async (e: React.MouseEvent) => {
-    // ... code ...
+    e.preventDefault();
+
+    if (selectedTemplateIndex === null) {
+      setError('יש לבחור תבנית מקור');
+      return;
+    }
+
+    if (selectedStopKeys.length === 0) {
+      setError('לא נבחרו תחנות להעברה');
+      return;
+    }
+
+    if (moveTargetTemplateIndex === null) {
+      setError('יש לבחור תבנית יעד');
+      return;
+    }
+
+    if (moveTargetTemplateIndex === selectedTemplateIndex) {
+      setError('תבנית היעד חייבת להיות שונה מתבנית המקור');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const selectedKeysSet = new Set(selectedStopKeys);
+
+      const sourceStops = templates[selectedTemplateIndex].stops ?? [];
+      const toMove = sourceStops.filter(stop => selectedKeysSet.has(keyOf(stop)));
+
+      if (toMove.length === 0) {
+        setError('לא נמצאו תחנות תואמות להעברה (יתכן שהרשימה עודכנה)');
+        return;
+      }
+
+      const remainingSourceStops = sourceStops
+        .filter(stop => !selectedKeysSet.has(keyOf(stop)))
+        .sort((a, b) => a.time.localeCompare(b.time));
+
+      const targetStops = templates[moveTargetTemplateIndex].stops ?? [];
+      const targetKeys = new Set(targetStops.map(keyOf));
+      const duplicates = toMove.filter(stop => targetKeys.has(keyOf(stop)));
+
+      if (duplicates.length > 0) {
+        setError(`לא ניתן להעביר: ${duplicates.length} תחנות כבר קיימות בתבנית היעד באותה שעה עם אותו עובד`);
+        return;
+      }
+
+      const nextTargetStops = [...targetStops, ...toMove].sort((a, b) => a.time.localeCompare(b.time));
+
+      // Update target first (creates it if missing), then update source.
+      await upsertTemplateStops(moveTargetTemplateIndex, nextTargetStops);
+
+      if (templates[selectedTemplateIndex].id || remainingSourceStops.length > 0) {
+        await upsertTemplateStops(selectedTemplateIndex, remainingSourceStops);
+      } else {
+        // No DB row and now empty — keep local template clean.
+        setTemplates(prev => {
+          const next = [...prev];
+          next[selectedTemplateIndex] = { name: `תבנית ${selectedTemplateIndex + 1}`, stops: [] };
+          return next;
+        });
+      }
+
+      clearSelection();
+      setIsSelectMode(false);
+      setMoveTargetTemplateIndex(null);
+    } catch (err) {
+      console.error('Error moving stops:', err);
+      setError('אירעה שגיאה בהעברת התחנות');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBulkUpdateEmployee = async (e: React.MouseEvent) => {
