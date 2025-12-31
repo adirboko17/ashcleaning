@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Search, Calendar, Building2, User, CheckCircle, Clock, Plus, X, Image, AlertCircle, Edit, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { compressReceiptImage } from '../../utils/receiptImage';
 
@@ -73,6 +73,7 @@ export default function JobsList() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
+  const [dateFilterMode, setDateFilterMode] = useState<'scheduled' | 'completed'>('scheduled');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const pageSize = 100;
   const [page, setPage] = useState(1);
@@ -189,17 +190,17 @@ export default function JobsList() {
 
   useEffect(() => {
     fetchJobs();
-  }, [page, selectedDate, statusFilter, sortOrder]);
+  }, [page, selectedDate, dateFilterMode, statusFilter, sortOrder]);
 
   // Reset to first page when filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedDate, statusFilter]);
+  }, [selectedDate, dateFilterMode, statusFilter]);
 
   // Clear selection when switching pages/filters/sort or toggling bulk mode
   useEffect(() => {
     setSelectedJobIds([]);
-  }, [isBulkEditMode, page, selectedDate, statusFilter, sortOrder]);
+  }, [isBulkEditMode, page, selectedDate, dateFilterMode, statusFilter, sortOrder]);
 
   useEffect(() => {
     // Reset the add modal position each time it opens
@@ -523,6 +524,9 @@ export default function JobsList() {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
+      const dateField: 'scheduled_date' | 'completed_date' =
+        dateFilterMode === 'completed' ? 'completed_date' : 'scheduled_date';
+
       let query = supabase
         .from('jobs')
         .select(`
@@ -546,7 +550,7 @@ export default function JobsList() {
             full_name
           )
         `, { count: 'exact' })
-        .order('scheduled_date', { ascending: sortOrder === 'asc' })
+        .order(dateField, { ascending: sortOrder === 'asc' })
         .range(from, to);
 
       if (statusFilter !== 'all') {
@@ -554,9 +558,12 @@ export default function JobsList() {
       }
 
       if (selectedDate) {
+        // Use local-day bounds, converted to UTC ISO, to avoid server timezone surprises.
+        const start = startOfDay(parseISO(selectedDate));
+        const end = endOfDay(parseISO(selectedDate));
         query = query
-          .gte('scheduled_date', `${selectedDate}T00:00:00`)
-          .lte('scheduled_date', `${selectedDate}T23:59:59.999`);
+          .gte(dateField, start.toISOString())
+          .lte(dateField, end.toISOString());
       }
 
       const { data, error, count } = await query;
@@ -981,15 +988,49 @@ export default function JobsList() {
             {/* Filters Row */}
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Date Filter */}
-              <div className="relative flex-1">
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-5 py-3 pr-11 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                  dir="ltr"
-                />
-                <Calendar className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+              <div className="flex-1 space-y-2">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-5 py-3 pr-11 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                    dir="ltr"
+                  />
+                  <Calendar className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                </div>
+
+                {/* Date Filter Mode Toggle */}
+                <div className="grid grid-cols-2 gap-1 bg-gray-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setDateFilterMode('scheduled')}
+                    className={`w-full px-3 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
+                      dateFilterMode === 'scheduled'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    title="סנן לפי תאריך תזמון"
+                  >
+                    תאריך תזמון
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFilterMode('completed');
+                      // Pending jobs don't have completed_date; switch away from pending to avoid “empty” confusion.
+                      setStatusFilter((prev) => (prev === 'pending' ? 'completed' : prev));
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm ${
+                      dateFilterMode === 'completed'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    title="סנן לפי תאריך ביצוע"
+                  >
+                    תאריך ביצוע
+                  </button>
+                </div>
               </div>
 
               {/* Status Filter Tabs */}
