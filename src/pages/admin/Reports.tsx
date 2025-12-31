@@ -23,6 +23,23 @@ interface Client {
   full_name: string;
 }
 
+// In jsPDF RTL tables, numbers can flip when they get wrapped to a new line.
+// Fix: keep numbers glued to previous token (NBSP) and force number runs to LTR using bidi-isolates.
+// (These marks are non-printing and shouldn't show as visible symbols.)
+const stripBidiMarks = (s: string) => (s ?? '').replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+const formatRtlPdfCellText = (s: string) => {
+  const clean = stripBidiMarks(s);
+  const NBSP = '\u00A0';
+  const LRI = '\u2066';
+  const PDI = '\u2069';
+
+  // Replace normal spaces right before digit runs with NBSP, so AutoTable won't drop digits alone to next line.
+  const withNbsp = clean.replace(/\s+(?=\d)/g, NBSP);
+
+  // Force digit runs to LTR.
+  return withNbsp.replace(/\d+/g, (m) => `${LRI}${m}${PDI}`);
+};
+
 export default function Reports() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -135,8 +152,8 @@ export default function Reports() {
         
         return [
           formattedDate,
-          job.branch.name,
-          job.branch.address,
+          formatRtlPdfCellText(job.branch.name),
+          formatRtlPdfCellText(job.branch.address),
           (index + 1).toString().split('').reverse().join('')
         ];
       });
