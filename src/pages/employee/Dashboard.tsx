@@ -132,7 +132,7 @@ function UpcomingJobs() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // asc = קרוב→רחוק
+  const sortOrder: 'asc' | 'desc' = 'asc'; // asc = קרוב→רחוק
   const user = useAuthStore((state) => state.user);
 
   const normalizeJob = (row: any): Job => {
@@ -151,9 +151,6 @@ function UpcomingJobs() {
   useEffect(() => {
     async function fetchUpcomingJobs() {
       try {
-        // First, delete old jobs
-        await supabase.rpc('delete_old_jobs');
-        
         // If it's 22:00 or later, show tomorrow's jobs too
         const now = new Date();
         const currentHour = now.getHours();

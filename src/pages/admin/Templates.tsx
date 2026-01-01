@@ -218,18 +218,30 @@ export default function Templates() {
     }
   }
 
-  async function upsertTemplateStops(templateIndex: number, stops: RouteStop[]) {
+  async function upsertTemplateStops(templateIndex: number, stops: RouteStop[], templateIdOverride?: string) {
+    const existingId = templateIdOverride ?? templates[templateIndex]?.id;
+
+    // Don't create empty templates in DB
+    if (!existingId && stops.length === 0) {
+      setTemplates(prev => {
+        const next = [...prev];
+        next[templateIndex] = { name: `תבנית ${templateIndex + 1}`, stops: [] };
+        return next;
+      });
+      return;
+    }
+
     const templateToUpdate = {
       name: `תבנית ${templateIndex + 1}`,
       stops
     };
 
     let result;
-    if (templates[templateIndex].id) {
+    if (existingId) {
       result = await supabase
         .from('work_route_templates')
         .update(templateToUpdate)
-        .eq('id', templates[templateIndex].id)
+        .eq('id', existingId)
         .select()
         .single();
     } else {
@@ -412,25 +424,53 @@ export default function Templates() {
     }
   };
 
-  const handleRemoveStop = async (templateIndex: number, stopIndex: number) => {
+  const handleRemoveStop = async (templateIndex: number, stop: RouteStop) => {
+    const originalStopsSnapshot = templates[templateIndex]?.stops ?? [];
+    const existingIdSnapshot = templates[templateIndex]?.id;
+
     try {
       setIsSubmitting(true);
       setError(null);
 
-      const updatedStops = templates[templateIndex].stops.filter((_, i) => i !== stopIndex);
+      const stopKey = keyOf(stop);
+      const stopIndex = originalStopsSnapshot.findIndex(s => keyOf(s) === stopKey);
 
-      if (templates[templateIndex].id || updatedStops.length > 0) {
-        await upsertTemplateStops(templateIndex, updatedStops);
-      } else {
-        setTemplates(prev => {
-          const next = [...prev];
-          next[templateIndex] = { name: `תבנית ${templateIndex + 1}`, stops: [] };
-          return next;
-        });
+      if (stopIndex === -1) {
+        setError('לא נמצאה התחנה למחיקה');
+        return;
+      }
+
+      const updatedStops = originalStopsSnapshot.filter((_, i) => i !== stopIndex);
+
+      // Optimistic UI update
+      setTemplates(prev => {
+        const next = [...prev];
+        next[templateIndex] = {
+          ...next[templateIndex],
+          name: `תבנית ${templateIndex + 1}`,
+          stops: updatedStops
+        };
+        return next;
+      });
+
+      // Persist
+      if (existingIdSnapshot || updatedStops.length > 0) {
+        await upsertTemplateStops(templateIndex, updatedStops, existingIdSnapshot);
       }
     } catch (err) {
       console.error('Error removing stop:', err);
       setError('אירעה שגיאה במחיקת התחנה');
+
+      // Revert optimistic update on failure
+      setTemplates(prev => {
+        const next = [...prev];
+        next[templateIndex] = {
+          ...next[templateIndex],
+          name: `תבנית ${templateIndex + 1}`,
+          stops: originalStopsSnapshot
+        };
+        return next;
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1163,6 +1203,13 @@ export default function Templates() {
               </div>
             )}
 
+            {error && (
+              <div className="mt-4 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <X className="h-5 w-5 shrink-0 mt-0.5" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
             {isSelectMode && (
               <div className="mt-4 flex flex-col lg:flex-row lg:items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
                 <div className="text-sm text-gray-700">
@@ -1296,9 +1343,10 @@ export default function Templates() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleRemoveStop(selectedTemplateIndex, originalIndex)}
+                              onClick={() => handleRemoveStop(selectedTemplateIndex, stop)}
                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="הסר תחנה"
+                              disabled={isSubmitting}
                             >
                               <X className="h-5 w-5" />
                             </button>
