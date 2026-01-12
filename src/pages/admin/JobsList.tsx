@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Search, Calendar, Building2, User, CheckCircle, Clock, Plus, X, Image, AlertCircle, Edit, Trash2 } from 'lucide-react';
-import { format, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { compressReceiptImage } from '../../utils/receiptImage';
 
@@ -78,7 +78,7 @@ export default function JobsList() {
   const pageSize = 100;
   const [page, setPage] = useState(1);
   const [totalJobsCount, setTotalJobsCount] = useState(0);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // asc = קרוב→רחוק
+  const sortOrder: 'asc' | 'desc' = 'asc'; // asc = קרוב→רחוק
   const [isBulkEditMode, setIsBulkEditMode] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
@@ -182,11 +182,80 @@ export default function JobsList() {
       employee: employeeRaw
     } as Job;
   };
+  const buildLocalDayBounds = (value: string) => {
+    if (!value) return null;
+    const sanitized = value.trim();
+    let year: number | null = null;
+    let month: number | null = null;
+    let day: number | null = null;
+
+    if (sanitized.includes('/')) {
+      const [maybeDay, maybeMonth, maybeYear] = sanitized.split('/');
+      day = Number(maybeDay);
+      month = Number(maybeMonth);
+      year = Number(maybeYear);
+    } else if (sanitized.includes('-')) {
+      const [maybeYear, maybeMonth, maybeDay] = sanitized.split('-');
+      year = Number(maybeYear);
+      month = Number(maybeMonth);
+      day = Number(maybeDay);
+    }
+
+    if (
+      year == null ||
+      month == null ||
+      day == null ||
+      Number.isNaN(year) ||
+      Number.isNaN(month) ||
+      Number.isNaN(day)
+    ) {
+      return null;
+    }
+
+    const start = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const nextDayStart = new Date(start);
+    nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+    return { start, nextDayStart };
+  };
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [branchSearchTerm, setBranchSearchTerm] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const DEBUG_RUN_ID = 'run1';
+  const debugLog = (hypothesisId: string, location: string, message: string, data: Record<string, unknown>) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/6893b515-8ba9-4632-8333-f86f69c3c160', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: DEBUG_RUN_ID,
+        hypothesisId,
+        location,
+        message,
+        data,
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  };
+
+  const normalizeForSearch = (value: unknown): string => {
+    // Make free-text search resilient to RTL/LTR marks, non-breaking spaces, and extra whitespace.
+    // This fixes cases where the UI shows "מוחמד" / "דרימי" but filtering returns 0 results.
+    const s = String(value ?? '')
+      .normalize('NFKC')
+      .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '') // bidi control marks
+      .replace(/\u00A0/g, ' '); // NBSP
+
+    return s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+  };
 
   useEffect(() => {
     fetchJobs();
@@ -527,6 +596,18 @@ export default function JobsList() {
       const dateField: 'scheduled_date' | 'completed_date' =
         dateFilterMode === 'completed' ? 'completed_date' : 'scheduled_date';
 
+      debugLog('A', 'JobsList.tsx:fetchJobs:entry', 'fetchJobs called', {
+        page,
+        pageSize,
+        from,
+        to,
+        selectedDate,
+        dateFilterMode,
+        statusFilter,
+        dateField,
+        searchTermPreview: String(searchTerm ?? '').slice(0, 20),
+      });
+
       let query = supabase
         .from('jobs')
         .select(`
@@ -558,21 +639,59 @@ export default function JobsList() {
       }
 
       if (selectedDate) {
-        // Use local-day bounds, converted to UTC ISO, to avoid server timezone surprises.
-        const start = startOfDay(parseISO(selectedDate));
-        const end = endOfDay(parseISO(selectedDate));
-        query = query
-          .gte(dateField, start.toISOString())
-          .lte(dateField, end.toISOString());
+        const bounds = buildLocalDayBounds(selectedDate);
+        let start: Date | null = null;
+        let nextDayStart: Date | null = null;
+
+        if (bounds) {
+          start = bounds.start;
+          nextDayStart = bounds.nextDayStart;
+        } else {
+          const fallbackDate = new Date(selectedDate);
+          if (!Number.isNaN(fallbackDate.getTime())) {
+            start = new Date(fallbackDate);
+            start.setHours(0, 0, 0, 0);
+            nextDayStart = new Date(start);
+            nextDayStart.setDate(nextDayStart.getDate() + 1);
+          }
+        }
+
+        if (start && nextDayStart) {
+          debugLog('C', 'JobsList.tsx:fetchJobs:dateBounds', 'computed date bounds', {
+            selectedDate,
+            startLocal: start.toString(),
+            nextDayStartLocal: nextDayStart.toString(),
+            startISO: start.toISOString(),
+            nextDayStartISO: nextDayStart.toISOString(),
+          });
+          query = query
+            .gte(dateField, start.toISOString())
+            .lt(dateField, nextDayStart.toISOString());
+        } else {
+          debugLog('A', 'JobsList.tsx:fetchJobs:dateBounds', 'failed to compute date bounds', {
+            selectedDate,
+            boundsWasNull: !bounds,
+          });
+        }
       }
 
       const { data, error, count } = await query;
 
       if (error) throw error;
+      debugLog('B', 'JobsList.tsx:fetchJobs:result', 'supabase query result', {
+        count,
+        receivedRows: (data || []).length,
+        firstRowDateField: (data && (data as any[])[0] && (data as any[])[0][dateField]) || null,
+        firstRowScheduled: (data && (data as any[])[0] && (data as any[])[0].scheduled_date) || null,
+        firstRowCompleted: (data && (data as any[])[0] && (data as any[])[0].completed_date) || null,
+      });
       setTotalJobsCount(count ?? 0);
       setJobs((data || []).map(normalizeJob));
     } catch (error) {
       console.error('Error fetching jobs:', error);
+      debugLog('B', 'JobsList.tsx:fetchJobs:error', 'fetchJobs threw error', {
+        message: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -918,13 +1037,14 @@ export default function JobsList() {
   // Server-side pagination + server-side status/date filtering.
   // Client-side filtering only for the free-text search (current page).
   const filteredJobs = jobs.filter(job => {
-    const term = searchTerm.toLowerCase();
+    const term = normalizeForSearch(searchTerm);
+    if (!term) return true;
     return (
-      (job.branch?.name || '').toLowerCase().includes(term) ||
-      (job.branch?.address || '').toLowerCase().includes(term) ||
-      (job.branch?.client?.full_name || '').toLowerCase().includes(term) ||
-      (job.employee?.full_name || '').toLowerCase().includes(term) ||
-      (job.note || '').toLowerCase().includes(term)
+      normalizeForSearch(job.branch?.name).includes(term) ||
+      normalizeForSearch(job.branch?.address).includes(term) ||
+      normalizeForSearch(job.branch?.client?.full_name).includes(term) ||
+      normalizeForSearch(job.employee?.full_name).includes(term) ||
+      normalizeForSearch(job.note).includes(term)
     );
   });
 
