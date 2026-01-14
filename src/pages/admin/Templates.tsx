@@ -5,6 +5,7 @@ import { Search, Building2, Clock, Plus, X, MapPin, User, Pencil, ArrowRightLeft
 interface Employee {
   id: string;
   full_name: string;
+  is_active?: boolean;
 }
 
 interface Client {
@@ -164,7 +165,7 @@ export default function Templates() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name')
+        .select('id, full_name, is_active')
         .eq('role', 'employee')
         .order('full_name');
 
@@ -174,6 +175,8 @@ export default function Templates() {
       console.error('Error loading employees:', err);
     }
   }
+
+  const activeEmployees = employees.filter((e) => (e.is_active ?? true) === true);
 
   async function loadClients() {
     try {
@@ -730,7 +733,7 @@ export default function Templates() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
+  const filteredEmployees = activeEmployees.filter(emp =>
     emp.full_name.toLowerCase().includes(employeeSearchTerm.toLowerCase())
   );
 
@@ -1426,7 +1429,7 @@ export default function Templates() {
                   <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 </div>
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
-                  {employees
+                  {activeEmployees
                     .filter(emp => emp.full_name.toLowerCase().includes(bulkEditEmployeeSearchTerm.toLowerCase()))
                     .map(emp => (
                       <button
@@ -1526,7 +1529,7 @@ export default function Templates() {
                   <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 </div>
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
-                  {employees
+                  {activeEmployees
                     .filter(emp => emp.full_name.toLowerCase().includes(editEmployeeSearchTerm.toLowerCase()))
                     .map(emp => (
                       <button

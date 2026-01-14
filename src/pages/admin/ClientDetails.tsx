@@ -46,6 +46,12 @@ interface EditJobForm {
   scheduled_date: string;
 }
 
+interface Employee {
+  id: string;
+  full_name: string;
+  is_active?: boolean;
+}
+
 function ClientDetails() {
   const { id } = useParams<{ id: string }>();
   const [client, setClient] = useState<Client | null>(null);
@@ -76,7 +82,13 @@ function ClientDetails() {
     employee_id: '',
     scheduled_date: ''
   });
-  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; }>>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  const activeEmployees = employees.filter((e) => (e.is_active ?? true) === true);
+  const selectedEmployeeRecord =
+    editJobForm.employee_id ? employees.find((e) => e.id === editJobForm.employee_id) : undefined;
+  const isSelectedEmployeeInactive =
+    !!selectedEmployeeRecord && (selectedEmployeeRecord.is_active ?? true) === false;
 
   useEffect(() => {
     if (id) {
@@ -195,7 +207,7 @@ function ClientDetails() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name')
+        .select('id, full_name, is_active')
         .eq('role', 'employee')
         .order('full_name');
 
@@ -942,7 +954,12 @@ function ClientDetails() {
                   required
                 >
                   <option value="">בחר עובד</option>
-                  {employees.map((employee) => (
+                  {isSelectedEmployeeInactive && selectedEmployeeRecord && (
+                    <option value={selectedEmployeeRecord.id} disabled>
+                      {selectedEmployeeRecord.full_name} (לא פעיל)
+                    </option>
+                  )}
+                  {activeEmployees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.full_name}
                     </option>

@@ -42,6 +42,7 @@ interface BulkEditForm {
 interface Employee {
   id: string;
   full_name: string;
+  is_active?: boolean;
 }
 
 interface Client {
@@ -703,7 +704,7 @@ export default function JobsList() {
       const [employeesResponse, clientsResponse] = await Promise.all([
         supabase
           .from('users')
-          .select('id, full_name')
+          .select('id, full_name, is_active')
           .eq('role', 'employee')
           .order('full_name'),
         supabase
@@ -724,6 +725,12 @@ export default function JobsList() {
       setIsLoadingOptions(false);
     }
   }
+
+  const activeEmployees = employees.filter((e) => (e.is_active ?? true) === true);
+  const selectedEmployeeRecord =
+    editForm.employee_id ? employees.find((e) => e.id === editForm.employee_id) : undefined;
+  const isSelectedEmployeeInactive =
+    !!selectedEmployeeRecord && (selectedEmployeeRecord.is_active ?? true) === false;
 
   async function fetchClientBranches(clientId: string) {
     try {
@@ -1652,7 +1659,7 @@ export default function JobsList() {
                     disabled={isLoadingOptions}
                   >
                     <option value="">בחר עובד</option>
-                    {employees.map((employee) => (
+                    {activeEmployees.map((employee) => (
                       <option key={employee.id} value={employee.id}>
                         {employee.full_name}
                       </option>
@@ -1776,7 +1783,12 @@ export default function JobsList() {
                   required
                 >
                   <option value="">בחר עובד</option>
-                  {employees.map((employee) => (
+                  {isSelectedEmployeeInactive && selectedEmployeeRecord && (
+                    <option value={selectedEmployeeRecord.id} disabled>
+                      {selectedEmployeeRecord.full_name} (לא פעיל)
+                    </option>
+                  )}
+                  {activeEmployees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.full_name}
                     </option>
@@ -1895,7 +1907,7 @@ export default function JobsList() {
                   required
                 >
                   <option value="">בחר עובד</option>
-                  {employees.map((employee) => (
+                  {activeEmployees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.full_name}
                     </option>
