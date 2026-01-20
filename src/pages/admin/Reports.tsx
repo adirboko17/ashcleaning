@@ -1,20 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { FileText, Download, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { arialFontBase64 } from '../../fonts/arial-font';
+import html2pdf from 'html2pdf.js';
 
 interface Job {
   scheduled_date: string;
   branch: {
     name: string;
     address: string;
-    client: {
-      full_name: string;
-    };
+    client_id?: string;
   };
 }
 
@@ -23,21 +19,11 @@ interface Client {
   full_name: string;
 }
 
-// In jsPDF RTL tables, numbers can flip when they get wrapped to a new line.
-// Fix: keep numbers glued to previous token (NBSP) and force number runs to LTR using bidi-isolates.
-// (These marks are non-printing and shouldn't show as visible symbols.)
-const stripBidiMarks = (s: string) => (s ?? '').replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
-const formatRtlPdfCellText = (s: string) => {
-  const clean = stripBidiMarks(s);
-  const NBSP = '\u00A0';
-  const LRI = '\u2066';
-  const PDI = '\u2069';
-
-  // Replace normal spaces right before digit runs with NBSP, so AutoTable won't drop digits alone to next line.
-  const withNbsp = clean.replace(/\s+(?=\d)/g, NBSP);
-
-  // Force digit runs to LTR.
-  return withNbsp.replace(/\d+/g, (m) => `${LRI}${m}${PDI}`);
+type ReportRow = {
+  index: number;
+  date: string;
+  branchName: string;
+  branchAddress: string;
 };
 
 export default function Reports() {
@@ -47,6 +33,10 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [reportClientName, setReportClientName] = useState<string>('');
+  const [reportSubtitle, setReportSubtitle] = useState<string>('');
+  const [reportRows, setReportRows] = useState<ReportRow[]>([]);
+  const reportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchClients();
@@ -75,6 +65,7 @@ export default function Reports() {
 
       setIsGenerating(true);
       setError(null);
+      setReportRows([]);
 
       // תיקון טווח תאריכים כולל כל שעות החודש
       const startDate = new Date(`${selectedMonth}-01T00:00:00`);
@@ -115,89 +106,46 @@ export default function Reports() {
       if (clientError) throw clientError;
       if (!clientData) throw new Error('לא נמצא לקוח');
 
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        putOnlyUsedFonts: true,
-        direction: 'rtl'
-      });
-
-      doc.addFileToVFS('Arial.ttf', arialFontBase64);
-      doc.addFont('Arial.ttf', 'Arial', 'normal');
-      doc.setFont('Arial');
-      doc.setR2L(true);
-
-      doc.setFontSize(20);
-      const title = `דו"ח עבודות חודשי - ${clientData.full_name}`;
+      const titleClientName = clientData.full_name;
       const subtitle = format(startDate, 'MMMM yyyy', { locale: he });
 
-      doc.text(title, doc.internal.pageSize.getWidth() / 2, 20, {
-        align: 'center'
-      });
-
-      doc.setFontSize(16);
-      doc.text(subtitle, doc.internal.pageSize.getWidth() / 2, 30, {
-        align: 'center'
-      });
-
-      const tableData = jobs.map((job, index) => {
+      const rows: ReportRow[] = jobs.map((job, index) => {
         const date = new Date(job.scheduled_date);
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
-        // הפיכה מלאה של המחרוזת כדי להתמודד עם RTL
-        const normalDate = `${day}/${month}/${year}`;
-        const formattedDate = normalDate.split('').reverse().join('');
-        
-        return [
-          formattedDate,
-          formatRtlPdfCellText(job.branch.name),
-          formatRtlPdfCellText(job.branch.address),
-          (index + 1).toString().split('').reverse().join('')
-        ];
+
+        return {
+          index: index + 1,
+          date: `${day}/${month}/${year}`,
+          branchName: job.branch.name ?? '',
+          branchAddress: job.branch.address ?? ''
+        };
       });
 
-      autoTable(doc, {
-        head: [['תאריך', 'סניף', 'כתובת', 'מס\'']],
-        body: tableData,
-        startY: 40,
-        theme: 'grid',
-        styles: {
-          font: 'Arial',
-          fontSize: 10,
-          cellPadding: 5,
-          minCellHeight: 10,
-          halign: 'right',
-          valign: 'middle',
-          lineWidth: 0.1
-        },
-        headStyles: {
-          fillColor: [59, 130, 246],
-          textColor: 255,
-          font: 'Arial',
-          fontStyle: 'normal',
-          halign: 'right'
-        },
-        columnStyles: {
-          0: { halign: 'left', cellWidth: 30 },
-          1: { halign: 'right', cellWidth: 40 },
-          2: { halign: 'right', cellWidth: 'auto' },
-          3: { halign: 'center', cellWidth: 15 }
-        },
-        didDrawPage: (data) => {
-          doc.setFontSize(10);
-          const pageNumber = `עמוד ${data.pageNumber} מתוך ${doc.getNumberOfPages()}`;
-          doc.text(
-            pageNumber,
-            doc.internal.pageSize.getWidth() / 2,
-            doc.internal.pageSize.getHeight() - 10,
-            { align: 'center' }
-          );
-        }
-      });
+      setReportClientName(titleClientName);
+      setReportSubtitle(subtitle);
+      setReportRows(rows);
 
-      doc.save(`דוח_עבודות_${clientData.full_name}_${format(startDate, 'MM_yyyy')}.pdf`);
+      // Wait for the hidden report DOM to render before converting to PDF
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const el = reportRef.current;
+      if (!el) throw new Error('לא ניתן להפיק PDF (אלמנט דוח חסר)');
+
+      const filename = `דוח_עבודות_${titleClientName}_${format(startDate, 'MM_yyyy')}.pdf`;
+
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        })
+        .from(el)
+        .save();
     } catch (error) {
       console.error('Error generating report:', error);
       setError(error instanceof Error ? error.message : 'אירעה שגיאה בהפקת הדוח');
@@ -206,12 +154,82 @@ export default function Reports() {
     }
   };
 
+  const reportTitle = useMemo(() => {
+    return reportClientName ? `דו"ח עבודות חודשי - ${reportClientName}` : 'דו"ח עבודות חודשי';
+  }, [reportClientName]);
+
   const filteredClients = clients.filter(client =>
     client.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div>
+      {/* Hidden printable area for html2pdf */}
+      <div
+        style={{
+          position: 'fixed',
+          left: -10000,
+          top: 0,
+          width: 794, // roughly A4 width @ 96dpi
+          background: '#fff'
+        }}
+      >
+        <div
+          ref={reportRef}
+          dir="rtl"
+          style={{
+            padding: 24,
+            fontFamily: 'Arial, "Segoe UI", Tahoma, sans-serif',
+            color: '#111827'
+          }}
+        >
+          <style>{`
+            .report-root { direction: rtl; }
+            .bidi { unicode-bidi: plaintext; }
+            .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            .th { background: rgb(59,130,246); color: #fff; font-weight: 700; }
+            .cell, .th { border: 1px solid #e5e7eb; padding: 8px; vertical-align: middle; }
+            .right { text-align: right; }
+            .center { text-align: center; }
+            .ltr { direction: ltr; unicode-bidi: isolate; }
+            .pagebreak { page-break-after: always; }
+          `}</style>
+
+          <div className="report-root">
+            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 20, fontWeight: 700 }} className="bidi">{reportTitle}</div>
+              <div style={{ fontSize: 14, marginTop: 4 }} className="bidi">{reportSubtitle}</div>
+            </div>
+
+            <table className="table" aria-label="Monthly report table">
+              <thead>
+                <tr>
+                  <th className="th cell right" style={{ width: 90 }}>תאריך</th>
+                  <th className="th cell right" style={{ width: 160 }}>סניף</th>
+                  <th className="th cell right">כתובת</th>
+                  <th className="th cell center" style={{ width: 60 }}>מס׳</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportRows.map((r) => (
+                  <tr key={r.index}>
+                    <td className="cell right bidi"><span className="ltr">{r.date}</span></td>
+                    <td className="cell right bidi">{r.branchName}</td>
+                    <td className="cell right bidi">{r.branchAddress}</td>
+                    <td className="cell center bidi"><span className="ltr">{r.index}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: 12, fontSize: 11, color: '#6b7280', textAlign: 'center' }} className="bidi">
+              {/* Note: html2pdf doesn't provide an easy page count callback here */}
+              הופק בתאריך: <span className="ltr">{format(new Date(), 'dd/MM/yyyy')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <h1 className="text-2xl font-bold mb-6">דוחות</h1>
       <div className="bg-white rounded-lg shadow-sm max-w-2xl">
         <div className="p-6 space-y-6">
