@@ -137,12 +137,15 @@ export default function Reports() {
 
       await html2pdf()
         .set({
-          margin: [10, 10, 10, 10],
+          // Add a slightly larger bottom margin as a "safe area" so rows near the page end
+          // are more likely to move to the next page instead of getting clipped.
+          margin: [10, 10, 18, 10],
           filename,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] }
+          // Try to avoid splitting table rows across pages.
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: 'tr' }
         })
         .from(el)
         .save();
@@ -184,7 +187,7 @@ export default function Reports() {
           }}
         >
           <style>{`
-            .report-root { direction: rtl; }
+            .report-root { direction: rtl; padding-bottom: 16mm; } /* safe area at bottom */
             .bidi { unicode-bidi: plaintext; }
             .table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             .th { background: rgb(59,130,246); color: #fff; font-weight: 700; }
@@ -193,6 +196,9 @@ export default function Reports() {
             .center { text-align: center; }
             .ltr { direction: ltr; unicode-bidi: isolate; }
             .pagebreak { page-break-after: always; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
           `}</style>
 
           <div className="report-root">
