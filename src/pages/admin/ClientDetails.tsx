@@ -14,7 +14,7 @@ interface Job {
   employee: {
     id: string;
     full_name: string;
-  };
+  } | null;
 }
 
 interface Branch {
@@ -616,7 +616,9 @@ function ClientDetails() {
                           {/* Employee */}
                           <div className="flex items-center bg-white/70 p-3 rounded-lg mb-3 shadow-sm">
                             <User className="h-5 w-5 ml-2 text-indigo-600" />
-                            <span className="font-semibold text-gray-900">{job.employee.full_name}</span>
+                            <span className="font-semibold text-gray-900">
+                              {job.employee?.full_name ?? 'לא משויך עובד'}
+                            </span>
                           </div>
 
                           {/* Status and Actions */}
@@ -641,7 +643,7 @@ function ClientDetails() {
                                     onClick={() => {
                                       setSelectedJob(job);
                                       setEditJobForm({
-                                        employee_id: job.employee.id,
+                                        employee_id: job.employee?.id ?? '',
                                         scheduled_date: job.scheduled_date.slice(0, 16)
                                       });
                                       setShowEditJobModal(true);
