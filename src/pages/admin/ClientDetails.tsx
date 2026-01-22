@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Search, Building2, ArrowRight, Plus, X, Image, Calendar, User, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
+import { Search, Building2, ArrowRight, Plus, X, Image, Calendar, User, CheckCircle, Clock, Edit, Trash2, Phone } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -14,7 +14,7 @@ interface Job {
   employee: {
     id: string;
     full_name: string;
-  };
+  } | null;
 }
 
 interface Branch {
@@ -44,6 +44,12 @@ interface EditBranchForm {
 interface EditJobForm {
   employee_id: string;
   scheduled_date: string;
+}
+
+interface Employee {
+  id: string;
+  full_name: string;
+  is_active?: boolean;
 }
 
 function ClientDetails() {
@@ -76,7 +82,13 @@ function ClientDetails() {
     employee_id: '',
     scheduled_date: ''
   });
-  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string; }>>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  const activeEmployees = employees.filter((e) => (e.is_active ?? true) === true);
+  const selectedEmployeeRecord =
+    editJobForm.employee_id ? employees.find((e) => e.id === editJobForm.employee_id) : undefined;
+  const isSelectedEmployeeInactive =
+    !!selectedEmployeeRecord && (selectedEmployeeRecord.is_active ?? true) === false;
 
   useEffect(() => {
     if (id) {
@@ -195,7 +207,7 @@ function ClientDetails() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name')
+        .select('id, full_name, is_active')
         .eq('role', 'employee')
         .order('full_name');
 
@@ -409,25 +421,31 @@ function ClientDetails() {
       <div className="mb-6">
         <Link
           to="/admin/clients"
-          className="inline-flex items-center text-blue-600 hover:text-blue-700"
+          className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium transition-colors"
         >
           <ArrowRight className="h-5 w-5 ml-1" />
           חזרה לרשימת הלקוחות
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-xl shadow-lg mb-8 border border-blue-100">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div>
-            <h1 className="text-2xl font-bold mb-2">{client.full_name}</h1>
-            <p className="text-gray-600" dir="ltr">{client.phone_number}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              סה״כ {client.branches.length} סניפים
-            </p>
+            <h1 className="text-3xl font-bold mb-3 text-gray-900">{client.full_name}</h1>
+            <div className="flex items-center text-gray-700 mb-2" dir="ltr">
+              <Phone className="h-5 w-5 ml-2 text-blue-600" />
+              <span className="text-lg font-medium">{client.phone_number}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-blue-600 text-white shadow-sm">
+                <Building2 className="h-4 w-4 ml-1" />
+                {client.branches.length} סניפים
+              </span>
+            </div>
           </div>
           <button
             onClick={() => setShowAddBranchModal(true)}
-            className="btn btn-primary flex items-center w-full lg:w-auto"
+            className="btn btn-primary flex items-center w-full lg:w-auto shadow-lg hover:shadow-xl transition-shadow"
           >
             <Plus className="h-5 w-5 ml-2" />
             הוסף סניף
@@ -438,54 +456,61 @@ function ClientDetails() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Branches List */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+            <div className="p-5 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">סניפים</h2>
               <div className="relative">
                 <input
                   type="text"
                   placeholder="חיפוש בסניפים..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 pr-11 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                מציג {filteredBranches.length} מתוך {client.branches.length} סניפים
+              <p className="mt-2 text-xs text-gray-600">
+                <span className="font-semibold">{filteredBranches.length}</span> מתוך <span className="font-semibold">{client.branches.length}</span> סניפים
               </p>
             </div>
 
             <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
-              <div className="divide-y">
+              <div className="divide-y divide-gray-100">
                 {filteredBranches.map((branch) => (
                   <div
                     key={branch.id}
-                    className={`p-4 transition-colors ${
+                    className={`p-4 transition-all ${
                       selectedBranch?.id === branch.id
-                        ? 'bg-blue-50'
+                        ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-r-4 border-blue-500'
                         : 'hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <button
                         onClick={() => handleBranchClick(branch)}
                         className="flex-1 text-right"
                       >
                         <div className="flex items-start space-x-3 space-x-reverse">
-                          <Building2 className={`h-5 w-5 shrink-0 mt-1 ${
-                            selectedBranch?.id === branch.id ? 'text-blue-500' : 'text-gray-400'
-                          }`} />
-                          <div>
-                            <p className={`font-medium ${
-                              selectedBranch?.id === branch.id ? 'text-blue-700' : 'text-gray-900'
+                          <div className={`p-2 rounded-lg shrink-0 ${
+                            selectedBranch?.id === branch.id 
+                              ? 'bg-blue-500 shadow-md' 
+                              : 'bg-gray-100'
+                          }`}>
+                            <Building2 className={`h-5 w-5 ${
+                              selectedBranch?.id === branch.id ? 'text-white' : 'text-gray-500'
+                            }`} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`font-semibold text-sm ${
+                              selectedBranch?.id === branch.id ? 'text-blue-900' : 'text-gray-900'
                             }`}>{branch.name}</p>
-                            <p className={
-                              selectedBranch?.id === branch.id ? 'text-blue-600' : 'text-gray-600'
-                            }>{branch.address}</p>
+                            <p className={`text-xs mt-1 ${
+                              selectedBranch?.id === branch.id ? 'text-blue-700' : 'text-gray-600'
+                            }`}>{branch.address}</p>
                           </div>
                         </div>
                       </button>
-                      <div className="flex items-center space-x-2 space-x-reverse">
+                      <div className="flex items-center space-x-1 space-x-reverse">
                         <button
                           onClick={() => {
                             setSelectedBranch(branch);
@@ -495,7 +520,7 @@ function ClientDetails() {
                             });
                             setShowEditBranchModal(true);
                           }}
-                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-100 rounded"
+                          className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-all"
                           title="ערוך סניף"
                         >
                           <Edit className="h-4 w-4" />
@@ -505,7 +530,7 @@ function ClientDetails() {
                             setSelectedBranch(branch);
                             setShowDeleteBranchModal(true);
                           }}
-                          className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-100 rounded"
+                          className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all"
                           title="מחק סניף"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -522,9 +547,9 @@ function ClientDetails() {
         {/* Jobs List */}
         <div className="lg:col-span-2">
           {selectedBranch ? (
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-4 border-b">
-                <h2 className="text-xl font-bold mb-4">עבודות בסניף {selectedBranch.name}</h2>
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+              <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 className="text-xl font-bold mb-4 text-gray-900">עבודות בסניף {selectedBranch.name}</h2>
                 
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="relative flex-1">
@@ -532,70 +557,76 @@ function ClientDetails() {
                       type="date"
                       value={jobDateSearch}
                       onChange={(e) => setJobDateSearch(e.target.value)}
-                      className="w-full px-3 py-2 pr-10 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                      className="w-full px-4 py-2.5 pr-11 pl-11 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all"
                       dir="ltr"
                     />
-                    <Calendar className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
                     {!jobDateSearch && (
-                      <span className="absolute right-4 top-2.5 text-gray-400 pointer-events-none">
+                      <span className="absolute right-4 top-3 text-gray-400 pointer-events-none text-sm">
                       </span>
                     )}
                   </div>
                   {jobDateSearch && (
                     <button
                       onClick={() => setJobDateSearch('')}
-                      className="p-2 text-gray-600 hover:text-gray-900 shrink-0"
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg shrink-0 transition-all"
                     >
                       <X className="h-5 w-5" />
                     </button>
                   )}
                 </div>
                 
-                <p className="mt-2 text-sm text-gray-500">
-                  מציג {filteredJobs.length} מתוך {branchJobs.length} עבודות
+                <p className="mt-3 text-xs text-gray-600">
+                  מציג <span className="font-semibold">{filteredJobs.length}</span> מתוך <span className="font-semibold">{branchJobs.length}</span> עבודות
                 </p>
               </div>
               
-              <div className="max-h-[calc(100vh-24rem)] overflow-y-auto p-4">
+              <div className="max-h-[calc(100vh-24rem)] overflow-y-auto p-6">
                 {isLoadingJobs ? (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                  <div className="grid gap-5 grid-cols-1 md:grid-cols-2">
                     {[1, 2, 3].map((n) => (
-                      <div key={n} className="bg-gray-50 p-6 rounded-lg animate-pulse">
-                        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-full"></div>
+                      <div key={n} className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl animate-pulse border border-gray-200">
+                        <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded-lg w-full"></div>
                       </div>
                     ))}
                   </div>
                 ) : filteredJobs.length > 0 ? (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                  <div className="grid gap-5 grid-cols-1 md:grid-cols-2">
                     {filteredJobs.map((job) => (
-                      <div key={job.id} className="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <div className="p-4">
+                      <div key={job.id} className={`rounded-xl shadow-md hover:shadow-xl transition-all border-2 ${
+                        job.status === 'completed' 
+                          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+                          : 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200'
+                      }`}>
+                        <div className="p-5">
                           {/* Date and Time */}
-                          <div className="flex items-center text-gray-600 mb-3">
-                            <Calendar className="h-5 w-5 ml-2" />
+                          <div className="flex items-start bg-white/70 p-3 rounded-lg mb-3 shadow-sm">
+                            <Calendar className="h-5 w-5 ml-3 text-blue-600 mt-0.5" />
                             <div>
-                              <p className="font-medium">
+                              <p className="font-semibold text-gray-900 text-sm">
                                 {format(new Date(job.scheduled_date), 'EEEE, d בMMMM', { locale: he })}
                               </p>
-                              <p className="text-sm">
+                              <p className="text-blue-600 font-bold text-lg">
                                 {format(new Date(job.scheduled_date), 'HH:mm')}
                               </p>
                             </div>
                           </div>
 
                           {/* Employee */}
-                          <div className="flex items-center text-gray-600 mb-3">
-                            <User className="h-5 w-5 ml-2" />
-                            <span>{job.employee.full_name}</span>
+                          <div className="flex items-center bg-white/70 p-3 rounded-lg mb-3 shadow-sm">
+                            <User className="h-5 w-5 ml-2 text-indigo-600" />
+                            <span className="font-semibold text-gray-900">
+                              {job.employee?.full_name ?? 'לא משויך עובד'}
+                            </span>
                           </div>
 
                           {/* Status and Actions */}
                           <div className="flex items-center justify-between mt-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
                               job.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-yellow-500 text-white'
                             }`}>
                               {job.status === 'completed' ? (
                                 <CheckCircle className="h-4 w-4 ml-1" />
@@ -605,19 +636,19 @@ function ClientDetails() {
                               {job.status === 'completed' ? 'הושלם' : 'ממתין'}
                             </span>
 
-                            <div className="flex items-center space-x-2 space-x-reverse">
+                            <div className="flex items-center space-x-1.5 space-x-reverse">
                               {job.status === 'pending' && (
                                 <>
                                   <button
                                     onClick={() => {
                                       setSelectedJob(job);
                                       setEditJobForm({
-                                        employee_id: job.employee.id,
+                                        employee_id: job.employee?.id ?? '',
                                         scheduled_date: job.scheduled_date.slice(0, 16)
                                       });
                                       setShowEditJobModal(true);
                                     }}
-                                    className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                    className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-all shadow-sm"
                                     title="ערוך עבודה"
                                   >
                                     <Edit className="h-4 w-4" />
@@ -627,7 +658,7 @@ function ClientDetails() {
                                       setSelectedJob(job);
                                       setShowDeleteJobModal(true);
                                     }}
-                                    className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
+                                    className="p-2 text-red-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all shadow-sm"
                                     title="מחק עבודה"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -637,7 +668,7 @@ function ClientDetails() {
                               {job.status === 'completed' && job.receipt_url && (
                                 <button
                                   onClick={() => setSelectedImage(job.receipt_url)}
-                                  className="text-blue-600 hover:text-blue-700 flex items-center"
+                                  className="text-blue-600 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-lg flex items-center font-medium text-sm transition-all shadow-sm"
                                 >
                                   <Image className="h-4 w-4 ml-1" />
                                   צפה בתמונה
@@ -647,7 +678,7 @@ function ClientDetails() {
                           </div>
 
                           {job.completed_date && (
-                            <p className="mt-2 text-sm text-gray-500">
+                            <p className="mt-3 text-xs text-gray-600 bg-white/50 px-3 py-1.5 rounded-md inline-block">
                               הושלם ב-{format(new Date(job.completed_date), 'HH:mm')}
                             </p>
                           )}
@@ -656,17 +687,20 @@ function ClientDetails() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 font-medium">אין עבודות לסניף זה</p>
+                  <div className="text-center py-16 bg-gray-50 rounded-xl">
+                    <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-semibold text-lg">אין עבודות לסניף זה</p>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">בחר סניף כדי לצפות בעבודות</p>
+            <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl shadow-lg p-16 text-center border-2 border-dashed border-gray-300">
+              <div className="bg-white p-6 rounded-full inline-block shadow-md mb-4">
+                <Building2 className="h-16 w-16 text-blue-500" />
+              </div>
+              <p className="text-gray-700 font-semibold text-xl mb-2">בחר סניף כדי לצפות בעבודות</p>
+              <p className="text-gray-500 text-sm">לחץ על אחד הסניפים ברשימה כדי להציג את העבודות שלו</p>
             </div>
           )}
         </div>
@@ -674,8 +708,8 @@ function ClientDetails() {
 
       {/* Add Branch Modal */}
       {showAddBranchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">הוספת סניף חדש</h2>
               <button
@@ -684,7 +718,7 @@ function ClientDetails() {
                   setBranchForm({ name: '', address: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -751,8 +785,8 @@ function ClientDetails() {
 
       {/* Edit Branch Modal */}
       {showEditBranchModal && selectedBranch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">עריכת סניף</h2>
               <button
@@ -762,7 +796,7 @@ function ClientDetails() {
                   setEditBranchForm({ name: '', address: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -831,8 +865,8 @@ function ClientDetails() {
 
       {/* Delete Branch Modal */}
       {showDeleteBranchModal && selectedBranch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">מחיקת סניף</h2>
               <button
@@ -841,7 +875,7 @@ function ClientDetails() {
                   setSelectedBranch(null);
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -890,8 +924,8 @@ function ClientDetails() {
 
       {/* Edit Job Modal */}
       {showEditJobModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">עריכת עבודה</h2>
               <button
@@ -904,7 +938,7 @@ function ClientDetails() {
                   });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -922,7 +956,12 @@ function ClientDetails() {
                   required
                 >
                   <option value="">בחר עובד</option>
-                  {employees.map((employee) => (
+                  {isSelectedEmployeeInactive && selectedEmployeeRecord && (
+                    <option value={selectedEmployeeRecord.id} disabled>
+                      {selectedEmployeeRecord.full_name} (לא פעיל)
+                    </option>
+                  )}
+                  {activeEmployees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
                       {employee.full_name}
                     </option>
@@ -982,8 +1021,8 @@ function ClientDetails() {
 
       {/* Delete Job Modal */}
       {showDeleteJobModal && selectedJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md my-8 relative shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">מחיקת עבודה</h2>
               <button
@@ -992,7 +1031,7 @@ function ClientDetails() {
                   setSelectedJob(null);
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1051,19 +1090,19 @@ function ClientDetails() {
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-4xl w-full">
+          <div className="relative max-w-4xl w-full flex items-center justify-center">
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg"
+              className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg z-10"
             >
               <X className="h-6 w-6 text-gray-600" />
             </button>
             <img
-  src={selectedImage}
-  alt="קבלה"
-  className="max-h-[80vh] w-auto max-w-full object-contain mx-auto rounded-lg"
-  onClick={(e) => e.stopPropagation()}
-/>
+              src={selectedImage}
+              alt="קבלה"
+              className="max-h-[90vh] w-auto max-w-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}

@@ -34,6 +34,18 @@ export default function ExecuteJobs() {
   const [selectedDate, setSelectedDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const normalizeForSearch = (value: unknown): string => {
+    const s = String(value ?? '')
+      .normalize('NFKC')
+      .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+      .replace(/\u00A0/g, ' ');
+
+    return s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+  };
+
   useEffect(() => {
     fetchPendingJobs();
   }, []);
@@ -132,16 +144,13 @@ export default function ExecuteJobs() {
 
   // Filter jobs by search term and date
   const filteredJobs = jobs.filter(job => {
-    const clientName = job.branch?.client?.full_name ?? '';
-    const branchName = job.branch?.name ?? '';
-    const branchAddress = job.branch?.address ?? '';
-    const employeeName = job.employee?.full_name ?? '';
-
-    const searchMatch =
-      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      branchAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employeeName.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = normalizeForSearch(searchTerm);
+    const searchMatch = !term
+      ? true
+      : normalizeForSearch(job.branch?.client?.full_name).includes(term) ||
+        normalizeForSearch(job.branch?.name).includes(term) ||
+        normalizeForSearch(job.branch?.address).includes(term) ||
+        normalizeForSearch(job.employee?.full_name).includes(term);
 
     if (!selectedDate) return searchMatch;
 
