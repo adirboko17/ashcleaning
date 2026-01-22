@@ -1,0 +1,16 @@
+{
+  "name": "עש ניקיון ואחזקה",
+  "short_name": "עש ניקיון",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/ashfav.jpg",
+      "sizes": "any",
+      "type": "image/jpeg"
+    }
+  ]
+}
+
