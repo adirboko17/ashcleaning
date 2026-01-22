@@ -224,6 +224,7 @@ export default function JobsList() {
   const [branchSearchTerm, setBranchSearchTerm] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const SEARCH_MAX_RESULTS = 2000;
 
   const DEBUG_RUN_ID = 'run1';
   const debugLog = (hypothesisId: string, location: string, message: string, data: Record<string, unknown>) => {
@@ -258,19 +259,21 @@ export default function JobsList() {
       .replace(/\s+/g, ' ');
   };
 
+  const isSearchMode = normalizeForSearch(searchTerm) !== '';
+
   useEffect(() => {
     fetchJobs();
-  }, [page, selectedDate, dateFilterMode, statusFilter, sortOrder]);
+  }, [page, selectedDate, dateFilterMode, statusFilter, sortOrder, isSearchMode]);
 
   // Reset to first page when filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedDate, dateFilterMode, statusFilter]);
+  }, [selectedDate, dateFilterMode, statusFilter, isSearchMode]);
 
   // Clear selection when switching pages/filters/sort or toggling bulk mode
   useEffect(() => {
     setSelectedJobIds([]);
-  }, [isBulkEditMode, page, selectedDate, dateFilterMode, statusFilter, sortOrder]);
+  }, [isBulkEditMode, page, selectedDate, dateFilterMode, statusFilter, sortOrder, searchTerm]);
 
   useEffect(() => {
     // Reset the add modal position each time it opens
@@ -591,8 +594,8 @@ export default function JobsList() {
     try {
       setIsLoading(true);
 
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
+      const from = isSearchMode ? 0 : (page - 1) * pageSize;
+      const to = isSearchMode ? SEARCH_MAX_RESULTS - 1 : from + pageSize - 1;
 
       const dateField: 'scheduled_date' | 'completed_date' =
         dateFilterMode === 'completed' ? 'completed_date' : 'scheduled_date';
@@ -607,6 +610,8 @@ export default function JobsList() {
         statusFilter,
         dateField,
         searchTermPreview: String(searchTerm ?? '').slice(0, 20),
+        isSearchMode,
+        searchMaxResults: SEARCH_MAX_RESULTS,
       });
 
       let query = supabase
@@ -850,9 +855,35 @@ export default function JobsList() {
 
   const openBulkEdit = () => {
     setError(null);
-    setBulkEditForm({ employee_id: '', scheduled_date: '' });
+    const selectedJobs = jobs.filter((j) => selectedJobIds.includes(j.id));
+
+    const employeeIds = new Set(
+      selectedJobs
+        .map((j) => j.employee?.id)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const scheduledDates = new Set(
+      selectedJobs
+        .map((j) => (j.scheduled_date ? j.scheduled_date.slice(0, 10) : '')) // YYYY-MM-DD
+        .filter(Boolean)
+    );
+
+    setBulkEditForm({
+      employee_id: employeeIds.size === 1 ? Array.from(employeeIds)[0] : '',
+      scheduled_date: scheduledDates.size === 1 ? Array.from(scheduledDates)[0] : '',
+    });
     setShowBulkEditModal(true);
   };
+
+  const bulkEditScheduledDatePreview = React.useMemo(() => {
+    const v = bulkEditForm.scheduled_date;
+    if (!v) return null;
+    const [year, month, day] = v.split('-').map(Number);
+    if (!year || !month || !day) return v;
+    const date = new Date(year, month - 1, day);
+    return `${format(date, 'dd/MM/yyyy')} • ${format(date, 'EEEE, d בMMMM yyyy', { locale: he })}`;
+  }, [bulkEditForm.scheduled_date]);
 
   const handleBulkEditJobs = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1042,7 +1073,9 @@ export default function JobsList() {
   }
 
   // Server-side pagination + server-side status/date filtering.
-  // Client-side filtering only for the free-text search (current page).
+  // Client-side filtering for free-text search.
+  // When search is active, we fetch up to SEARCH_MAX_RESULTS rows in one shot (single page),
+  // so matches won't be spread across many pages.
   const filteredJobs = jobs.filter(job => {
     const term = normalizeForSearch(searchTerm);
     if (!term) return true;
@@ -1055,7 +1088,7 @@ export default function JobsList() {
     );
   });
 
-  const totalPages = Math.max(1, Math.ceil(totalJobsCount / pageSize));
+  const totalPages = isSearchMode ? 1 : Math.max(1, Math.ceil(totalJobsCount / pageSize));
   const selectedSet = new Set(selectedJobIds);
   // Bulk edit should be able to target both pending and completed jobs
   // (e.g. to fix employee/date on completed jobs as requested).
@@ -1201,14 +1234,29 @@ export default function JobsList() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <div className="bg-blue-50 px-4 py-2 rounded-lg">
                 <span className="text-sm font-semibold text-blue-700">
-                  {filteredJobs.length} מתוך {totalJobsCount}
+                  {isSearchMode ? (
+                    <>
+                      נמצאו {filteredJobs.length} תוצאות חיפוש
+                    </>
+                  ) : (
+                    <>
+                      {filteredJobs.length} מתוך {totalJobsCount}
+                    </>
+                  )}
                 </span>
                 <span className="text-xs text-blue-600 mr-1">עבודות</span>
               </div>
-              <div className="text-sm text-gray-600">
-                עמוד <span className="font-semibold text-gray-900">{page}</span> מתוך{' '}
-                <span className="font-semibold text-gray-900">{totalPages}</span>
-              </div>
+              {!isSearchMode && (
+                <div className="text-sm text-gray-600">
+                  עמוד <span className="font-semibold text-gray-900">{page}</span> מתוך{' '}
+                  <span className="font-semibold text-gray-900">{totalPages}</span>
+                </div>
+              )}
+              {isSearchMode && jobs.length >= SEARCH_MAX_RESULTS && (
+                <div className="text-xs text-gray-600">
+                  מוצגות עד <span className="font-semibold">{SEARCH_MAX_RESULTS}</span> עבודות לחיפוש. כדי לצמצם עוד – הוסף פילטרים.
+                </div>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
@@ -1235,24 +1283,26 @@ export default function JobsList() {
                   {isBulkEditMode ? 'עריכה פעילה' : 'עריכה'}
                 </span>
               </button>
-              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className="w-full px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  disabled={page <= 1 || isLoading}
-                >
-                  הקודם
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  disabled={page >= totalPages || isLoading}
-                >
-                  הבא
-                </button>
-              </div>
+              {!isSearchMode && (
+                <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="w-full px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    disabled={page <= 1 || isLoading}
+                  >
+                    הקודם
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    disabled={page >= totalPages || isLoading}
+                  >
+                    הבא
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1927,6 +1977,11 @@ export default function JobsList() {
                   required
                   dir="ltr"
                 />
+                {bulkEditScheduledDatePreview && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    תאריך שנבחר: <span className="font-medium">{bulkEditScheduledDatePreview}</span>
+                  </p>
+                )}
               </div>
 
               {error && (
