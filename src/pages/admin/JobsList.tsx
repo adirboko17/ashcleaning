@@ -1378,16 +1378,36 @@ export default function JobsList() {
                       />
                     </div>
                   )}
-                  <div className="p-5">
-                    <div className="flex flex-col lg:flex-row gap-4">
+                  {/* Status badge (top-left) */}
+                  <div
+                    className={`absolute top-3 left-3 z-10 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm ${
+                      job.status === 'completed'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {job.status === 'completed' ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>הושלם</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>ממתין</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="p-3 sm:p-5">
+                    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
                       {/* Date and Time - Icon Box */}
                       <div className="flex items-start gap-3">
-                        <div className={`flex-shrink-0 p-3 rounded-lg ${
+                        <div className={`flex-shrink-0 p-2 sm:p-3 rounded-lg ${
                           job.status === 'completed'
                             ? 'bg-green-50'
                             : 'bg-yellow-50'
                         }`}>
-                          <Calendar className={`h-6 w-6 ${
+                          <Calendar className={`h-5 w-5 sm:h-6 sm:w-6 ${
                             job.status === 'completed'
                               ? 'text-green-600'
                               : 'text-yellow-600'
@@ -1400,7 +1420,7 @@ export default function JobsList() {
                           <p className="text-gray-600 text-sm">
                             {format(new Date(job.scheduled_date), 'd בMMMM', { locale: he })}
                           </p>
-                          <p className="text-blue-600 font-medium text-lg mt-0.5">
+                          <p className="text-blue-600 font-medium text-base sm:text-lg mt-0.5">
                             {format(new Date(new Date(job.scheduled_date).getTime() + new Date().getTimezoneOffset() * 60000), 'HH:mm')}
                           </p>
                         </div>
@@ -1415,28 +1435,28 @@ export default function JobsList() {
                         <div>
                           <Link
                             to={job.branch?.client?.id ? `/admin/clients/${job.branch.client.id}` : '#'}
-                            className="text-lg font-bold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+                            className="text-base sm:text-lg font-bold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
                           >
                             <Building2 className="h-5 w-5" />
                             {job.branch?.client?.full_name || 'לקוח לא ידוע'}
                           </Link>
-                          <p className="text-sm text-gray-600 mt-1 mr-7">
+                          <p className="text-xs sm:text-sm text-gray-600 mt-1 mr-7 truncate">
                             {job.branch?.name || 'סניף לא ידוע'} · {job.branch?.address || 'כתובת לא ידועה'}
                           </p>
                         </div>
 
                         {/* Employee */}
                         <div className="flex items-center gap-2 text-gray-700">
-                          <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
+                          <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1 rounded-lg">
                             <User className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium">{job.employee?.full_name || 'עובד לא משויך'}</span>
+                            <span className="text-xs sm:text-sm font-medium">{job.employee?.full_name || 'עובד לא משויך'}</span>
                           </div>
                         </div>
 
                         {/* Note */}
                         {!!job.note?.trim() && (
-                          <div className="bg-blue-50 border-r-2 border-blue-400 p-3 rounded-lg">
-                            <p className="text-sm text-blue-900">
+                          <div className="bg-blue-50 border-r-2 border-blue-400 p-2 sm:p-3 rounded-lg">
+                            <p className="text-xs sm:text-sm text-blue-900 truncate sm:whitespace-normal sm:overflow-visible">
                               <span className="font-semibold">הערה:</span> {job.note}
                             </p>
                           </div>
@@ -1452,28 +1472,9 @@ export default function JobsList() {
                       </div>
 
                       {/* Status and Actions */}
-                      <div className="w-full flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between lg:justify-start gap-3">
-                        {/* Status Badge */}
-                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm ${
-                          job.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {job.status === 'completed' ? (
-                            <>
-                              <CheckCircle className="h-5 w-5" />
-                              <span>הושלם</span>
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="h-5 w-5" />
-                              <span>ממתין</span>
-                            </>
-                          )}
-                        </div>
-
+                      <div className="w-full flex flex-wrap items-center justify-between gap-2 lg:flex-col lg:items-end lg:justify-start lg:gap-3">
                         {!isBulkEditMode && (
-                          <div className="w-full flex flex-wrap items-center gap-2 justify-start sm:justify-end">
+                          <div className="w-full sm:w-auto flex flex-wrap items-center gap-2 justify-start sm:justify-end">
                             {job.status === 'pending' && (
                               <>
                                 <button
@@ -1486,7 +1487,7 @@ export default function JobsList() {
                                     });
                                     setShowEditModal(true);
                                   }}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                   title="ערוך עבודה"
                                 >
                                   <Edit className="h-5 w-5" />
@@ -1496,7 +1497,7 @@ export default function JobsList() {
                                     setSelectedJob(job);
                                     setShowDeleteModal(true);
                                   }}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                   title="מחק עבודה"
                                 >
                                   <Trash2 className="h-5 w-5" />
@@ -1508,9 +1509,9 @@ export default function JobsList() {
                                 {job.receipt_url && (
                                   <button
                                     onClick={() => setSelectedImage(job.receipt_url!)}
-                                    className="px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium"
                                   >
-                                    <Image className="h-4 w-4" />
+                                    <Image className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     <span>צפייה</span>
                                   </button>
                                 )}
@@ -1521,10 +1522,10 @@ export default function JobsList() {
                                     setReceiptError(null);
                                     setShowReceiptModal(true);
                                   }}
-                                  className="px-3 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                  className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium"
                                   title={job.receipt_url ? 'ערוך תמונה' : 'העלה תמונה'}
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                   <span>{job.receipt_url ? 'עריכה' : 'העלאה'}</span>
                                 </button>
                                 <button
@@ -1533,10 +1534,10 @@ export default function JobsList() {
                                     setJobToRevert(job);
                                     setShowRevertToPendingModal(true);
                                   }}
-                                  className="px-3 py-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                                  className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 rounded-lg transition-colors flex items-center gap-2 text-xs sm:text-sm font-medium"
                                   title="העבר לסטטוס ממתין (ימחק את התמונה)"
                                 >
-                                  <Clock className="h-4 w-4" />
+                                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                   <span>העבר לממתין</span>
                                 </button>
                                 <button
@@ -1544,7 +1545,7 @@ export default function JobsList() {
                                     setSelectedJob(job);
                                     setShowDeleteModal(true);
                                   }}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                   title="מחק עבודה"
                                 >
                                   <Trash2 className="h-5 w-5" />
