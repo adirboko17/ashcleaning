@@ -1379,7 +1379,7 @@ export default function JobsList() {
                     </div>
                   )}
                   {/* Status + delete (top-left) */}
-                  <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-2 sm:hidden">
                     <div
                       className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm ${
                         job.status === 'completed'
@@ -1489,6 +1489,27 @@ export default function JobsList() {
 
                       {/* Status and Actions */}
                       <div className="w-full flex flex-wrap items-center justify-between gap-2 lg:flex-col lg:items-end lg:justify-start lg:gap-3">
+                        {/* Status badge (desktop/tablet) */}
+                        <div
+                          className={`hidden sm:inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm ${
+                            job.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {job.status === 'completed' ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <span>הושלם</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <span>ממתין</span>
+                            </>
+                          )}
+                        </div>
+
                         {!isBulkEditMode && (
                           <div className="w-full sm:w-auto flex flex-wrap items-center gap-2 justify-start sm:justify-end">
                             {job.status === 'pending' && (
@@ -1507,6 +1528,17 @@ export default function JobsList() {
                                   title="ערוך עבודה"
                                 >
                                   <Edit className="h-5 w-5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="hidden sm:inline-flex p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="מחק עבודה"
+                                >
+                                  <Trash2 className="h-5 w-5" />
                                 </button>
                               </>
                             )}
@@ -1545,6 +1577,17 @@ export default function JobsList() {
                                 >
                                   <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                   <span>העבר לממתין</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="hidden sm:inline-flex p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="מחק עבודה"
+                                >
+                                  <Trash2 className="h-5 w-5" />
                                 </button>
                               </div>
                             )}
