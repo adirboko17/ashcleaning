@@ -1361,7 +1361,7 @@ export default function JobsList() {
               {filteredJobs.map((job) => (
                 <div
                   key={job.id}
-                  className={`relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border-r-4 overflow-hidden ${
+                  className={`relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border-r-4 overflow-visible ${
                     job.status === 'completed'
                       ? 'border-green-500'
                       : 'border-yellow-500'
@@ -1452,7 +1452,7 @@ export default function JobsList() {
                       </div>
 
                       {/* Status and Actions */}
-                      <div className="flex lg:flex-col items-start lg:items-end justify-between lg:justify-start gap-3">
+                      <div className="w-full flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between lg:justify-start gap-3">
                         {/* Status Badge */}
                         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm ${
                           job.status === 'completed'
@@ -1473,7 +1473,7 @@ export default function JobsList() {
                         </div>
 
                         {!isBulkEditMode && (
-                          <div className="flex items-center gap-2">
+                          <div className="w-full flex flex-wrap items-center gap-2 justify-start sm:justify-end">
                             {job.status === 'pending' && (
                               <>
                                 <button
@@ -1504,7 +1504,7 @@ export default function JobsList() {
                               </>
                             )}
                             {job.status === 'completed' && (
-                              <div className="flex gap-2">
+                              <div className="w-full flex flex-wrap gap-2">
                                 {job.receipt_url && (
                                   <button
                                     onClick={() => setSelectedImage(job.receipt_url!)}
