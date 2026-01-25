@@ -1378,24 +1378,40 @@ export default function JobsList() {
                       />
                     </div>
                   )}
-                  {/* Status badge (top-left) */}
-                  <div
-                    className={`absolute top-3 left-3 z-10 inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm ${
-                      job.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {job.status === 'completed' ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>הושלם</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>ממתין</span>
-                      </>
+                  {/* Status + delete (top-left) */}
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+                    <div
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm ${
+                        job.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {job.status === 'completed' ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                          <span>הושלם</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                          <span>ממתין</span>
+                        </>
+                      )}
+                    </div>
+
+                    {!isBulkEditMode && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setShowDeleteModal(true);
+                        }}
+                        className="p-1.5 sm:p-2 bg-white/90 text-red-600 hover:bg-red-50 rounded-lg transition-colors shadow-sm"
+                        title="מחק עבודה"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
                     )}
                   </div>
                   <div className="p-3 sm:p-5">
@@ -1492,16 +1508,6 @@ export default function JobsList() {
                                 >
                                   <Edit className="h-5 w-5" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedJob(job);
-                                    setShowDeleteModal(true);
-                                  }}
-                                  className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="מחק עבודה"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
                               </>
                             )}
                             {job.status === 'completed' && (
@@ -1539,16 +1545,6 @@ export default function JobsList() {
                                 >
                                   <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                   <span>העבר לממתין</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedJob(job);
-                                    setShowDeleteModal(true);
-                                  }}
-                                  className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="מחק עבודה"
-                                >
-                                  <Trash2 className="h-5 w-5" />
                                 </button>
                               </div>
                             )}
